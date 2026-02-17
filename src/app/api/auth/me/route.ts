@@ -25,7 +25,7 @@ export async function GET() {
       name: user.name,
       kandidatnummer: user.kandidatnummer,
       isAdmin: user.isAdmin,
-      groups: memberships.map((m) => m.group),
+      groups: memberships.map((m: typeof memberships[number]) => m.group),
     });
   } catch (error) {
     console.error("Me error:", error);

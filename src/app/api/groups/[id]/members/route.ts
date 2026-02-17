@@ -33,7 +33,7 @@ export async function GET(
     });
 
     return NextResponse.json(
-      members.map((m) => ({
+      members.map((m: typeof members[number]) => ({
         ...m.user,
         joinedAt: m.joinedAt,
       }))

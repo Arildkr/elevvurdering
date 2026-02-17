@@ -22,7 +22,7 @@ export async function GET() {
       });
 
       return NextResponse.json(
-        assignments.map((a) => ({
+        assignments.map((a: typeof assignments[number]) => ({
           ...a,
           phase: getAssignmentPhase(a.writeDeadline, a.reviewDeadline),
         }))
@@ -35,7 +35,7 @@ export async function GET() {
       select: { groupId: true },
     });
 
-    const groupIds = memberships.map((m) => m.groupId);
+    const groupIds = memberships.map((m: typeof memberships[number]) => m.groupId);
 
     const assignments = await prisma.assignment.findMany({
       where: { groupId: { in: groupIds } },
@@ -47,7 +47,7 @@ export async function GET() {
 
     // Get unread feedback counts for each assignment
     const assignmentsWithMeta = await Promise.all(
-      assignments.map(async (a) => {
+      assignments.map(async (a: typeof assignments[number]) => {
         const phase = getAssignmentPhase(a.writeDeadline, a.reviewDeadline);
 
         // Check if user has submitted text

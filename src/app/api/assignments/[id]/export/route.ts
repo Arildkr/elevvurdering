@@ -91,5 +91,5 @@ export async function GET(
 }
 
 function csvRow(values: string[]): string {
-  return values.map((v) => `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`).join(",");
+  return values.map((v: string) => `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`).join(",");
 }
