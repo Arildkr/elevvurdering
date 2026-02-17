@@ -5,6 +5,17 @@ interface TextEntry {
   authorId: string;
 }
 
+interface ExistingAssignment {
+  textId: string;
+  reviewerId: string;
+}
+
+interface AffectedAssignment {
+  id: string;
+  assignmentId: string;
+  reviewerId: string;
+}
+
 // Fisher-Yates shuffle
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array];
@@ -23,7 +34,7 @@ function shuffleArray<T>(array: T[]): T[] {
  * Returns the number of new assignments created.
  */
 export async function distributeReviews(assignmentId: string): Promise<number> {
-  const texts = await prisma.text.findMany({
+  const texts: TextEntry[] = await prisma.text.findMany({
     where: {
       assignmentId,
       author: { isActive: true },
@@ -36,13 +47,13 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
   }
 
   // Get existing active assignments to avoid duplicates
-  const existingAssignments = await prisma.reviewAssignment.findMany({
+  const existingAssignments: ExistingAssignment[] = await prisma.reviewAssignment.findMany({
     where: { assignmentId, isActive: true },
     select: { textId: true, reviewerId: true },
   });
 
   const existingSet = new Set(
-    existingAssignments.map((a) => `${a.textId}:${a.reviewerId}`)
+    existingAssignments.map((a: ExistingAssignment) => `${a.textId}:${a.reviewerId}`)
   );
 
   // Count existing assignments per text for fair distribution
@@ -55,7 +66,7 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
   }
 
   // Shuffle reviewers randomly
-  const reviewers = shuffleArray(texts.map((t) => t.authorId));
+  const reviewers = shuffleArray(texts.map((t: TextEntry) => t.authorId));
 
   const newAssignments: {
     assignmentId: string;
@@ -66,13 +77,13 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
   for (const reviewerId of reviewers) {
     // Check if this reviewer already has an active assignment
     const alreadyAssigned = existingAssignments.some(
-      (ea) => ea.reviewerId === reviewerId
+      (ea: ExistingAssignment) => ea.reviewerId === reviewerId
     );
     if (alreadyAssigned) continue;
 
     // Find eligible texts: not own text, not already assigned to this reviewer
     const eligible = texts.filter(
-      (t) =>
+      (t: TextEntry) =>
         t.authorId !== reviewerId &&
         !existingSet.has(`${t.id}:${reviewerId}`)
     );
@@ -81,7 +92,7 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
 
     // Pick the text with fewest existing assignments (greedy fair matching)
     const sorted = [...eligible].sort(
-      (a, b) =>
+      (a: TextEntry, b: TextEntry) =>
         (assignmentCountByText.get(a.id) || 0) -
         (assignmentCountByText.get(b.id) || 0)
     );
@@ -89,7 +100,7 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
     // Among texts with same minimum count, pick randomly
     const minCount = assignmentCountByText.get(sorted[0].id) || 0;
     const candidates = sorted.filter(
-      (t) => (assignmentCountByText.get(t.id) || 0) === minCount
+      (t: TextEntry) => (assignmentCountByText.get(t.id) || 0) === minCount
     );
     const chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
@@ -157,7 +168,7 @@ export async function findTextForAdditionalReview(
 
   // Among texts with fewest reviews, pick randomly
   const minReviews = texts[0]._count.reviews;
-  const candidates = texts.filter((t) => t._count.reviews === minReviews);
+  const candidates = texts.filter((t: typeof texts[number]) => t._count.reviews === minReviews);
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
   return { id: chosen.id, authorId: chosen.authorId };
@@ -170,7 +181,7 @@ export async function reassignAfterDeactivation(
   userId: string
 ): Promise<number> {
   // Find all active review assignments where the text author is the deactivated user
-  const affectedAssignments = await prisma.reviewAssignment.findMany({
+  const affectedAssignments: AffectedAssignment[] = await prisma.reviewAssignment.findMany({
     where: {
       text: { authorId: userId },
       isActive: true,
@@ -184,7 +195,7 @@ export async function reassignAfterDeactivation(
   // Deactivate old assignments
   await prisma.reviewAssignment.updateMany({
     where: {
-      id: { in: affectedAssignments.map((a) => a.id) },
+      id: { in: affectedAssignments.map((a: AffectedAssignment) => a.id) },
     },
     data: { isActive: false },
   });
