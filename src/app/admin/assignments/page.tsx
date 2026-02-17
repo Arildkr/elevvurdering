@@ -38,6 +38,7 @@ export default function AdminAssignmentsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [writeDeadline, setWriteDeadline] = useState("");
   const [reviewDeadline, setReviewDeadline] = useState("");
   const [minReviews, setMinReviews] = useState(1);
@@ -73,8 +74,8 @@ export default function AdminAssignmentsPage() {
           title,
           description: description || undefined,
           groupId,
-          writeDeadline: new Date(writeDeadline).toISOString(),
-          reviewDeadline: new Date(reviewDeadline).toISOString(),
+          writeDeadline: writeDeadline ? new Date(writeDeadline).toISOString() : undefined,
+          reviewDeadline: reviewDeadline ? new Date(reviewDeadline).toISOString() : undefined,
           minReviews,
           feedbackDeadline: feedbackDeadline ? new Date(feedbackDeadline).toISOString() : undefined,
         }),
@@ -160,59 +161,68 @@ export default function AdminAssignmentsPage() {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={3}
+                rows={2}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Skrivefrist</label>
-                <input
-                  type="datetime-local"
-                  value={writeDeadline}
-                  onChange={(e) => setWriteDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                />
+            <p className="text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+              Oppgaven aktiveres med en gang i skrivefase. Du styrer fasene manuelt fra oppgavesiden, eller kan sette frister under avanserte innstillinger.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              {showAdvanced ? "Skjul avanserte innstillinger" : "Vis avanserte innstillinger"}
+            </button>
+            {showAdvanced && (
+              <div className="space-y-4 border-t border-gray-100 pt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Skrivefrist (valgfritt)</label>
+                    <input
+                      type="datetime-local"
+                      value={writeDeadline}
+                      onChange={(e) => setWriteDeadline(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Vurderingsfrist (valgfritt)</label>
+                    <input
+                      type="datetime-local"
+                      value={reviewDeadline}
+                      onChange={(e) => setReviewDeadline(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tilbakemeldingsfrist (valgfritt)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={feedbackDeadline}
+                    onChange={(e) => setFeedbackDeadline(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Minimum antall vurderinger per elev
+                  </label>
+                  <input
+                    type="number"
+                    value={minReviews}
+                    onChange={(e) => setMinReviews(parseInt(e.target.value))}
+                    min={1}
+                    max={10}
+                    className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vurderingsfrist</label>
-                <input
-                  type="datetime-local"
-                  value={reviewDeadline}
-                  onChange={(e) => setReviewDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tilbakemeldingsfrist (valgfritt)
-              </label>
-              <input
-                type="datetime-local"
-                value={feedbackDeadline}
-                onChange={(e) => setFeedbackDeadline(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Tilbakemeldinger åpnes automatisk ved denne fristen. Du kan også åpne manuelt.
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Minimum antall vurderinger per elev
-              </label>
-              <input
-                type="number"
-                value={minReviews}
-                onChange={(e) => setMinReviews(parseInt(e.target.value))}
-                min={1}
-                max={10}
-                className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-              />
-            </div>
+            )}
             {formError && (
               <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{formError}</div>
             )}

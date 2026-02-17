@@ -62,6 +62,7 @@ export default function AdminAssignmentDetailPage() {
   const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState(10);
   const [timerLabel, setTimerLabel] = useState("");
+  const [changingPhase, setChangingPhase] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -176,6 +177,27 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
+  async function handlePhaseChange(phase: "writing" | "review" | "closed") {
+    const labels = { writing: "skrivefase", review: "vurderingsfase", closed: "lukket" };
+    if (!confirm(`Bytte til ${labels[phase]}?`)) return;
+    setChangingPhase(true);
+    try {
+      const res = await fetch(`/api/assignments/${id}/phase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase }),
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setChangingPhase(false);
+    }
+  }
+
   if (loading) return <div className="p-8 text-gray-500">Laster...</div>;
   if (!assignment) return <div className="p-8 text-gray-500">Oppgave ikke funnet</div>;
 
@@ -216,8 +238,29 @@ export default function AdminAssignmentDetailPage() {
         </div>
       </div>
 
+      {/* Phase control */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium text-gray-700">Fase:</span>
+          {(["writing", "review", "closed"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePhaseChange(p)}
+              disabled={changingPhase || assignment.phase === p}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                assignment.phase === p
+                  ? `${phaseColors[p]} ring-2 ring-offset-1 ring-gray-300`
+                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {phaseLabels[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Actions */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-3 mb-6 flex-wrap">
         <button
           onClick={handleDistribute}
           disabled={distributing}
@@ -340,11 +383,19 @@ export default function AdminAssignmentDetailPage() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="font-medium text-gray-700">Skrivefrist: </span>
-              <span className="text-gray-600">{new Date(assignment.writeDeadline).toLocaleString("no-NO")}</span>
+              <span className="text-gray-600">
+                {new Date(assignment.writeDeadline).getFullYear() > new Date().getFullYear()
+                  ? "Manuelt styrt"
+                  : new Date(assignment.writeDeadline).toLocaleString("no-NO")}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Vurderingsfrist: </span>
-              <span className="text-gray-600">{new Date(assignment.reviewDeadline).toLocaleString("no-NO")}</span>
+              <span className="text-gray-600">
+                {new Date(assignment.reviewDeadline).getFullYear() > new Date().getFullYear()
+                  ? "Manuelt styrt"
+                  : new Date(assignment.reviewDeadline).toLocaleString("no-NO")}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Min. vurderinger: </span>
@@ -390,7 +441,7 @@ export default function AdminAssignmentDetailPage() {
                   <tr key={t.id} className="border-b border-gray-100">
                     <td className="px-6 py-4 font-medium text-gray-900">{t.author.name}</td>
                     <td className="px-6 py-4 font-mono text-sm text-gray-600">{t.author.kandidatnummer}</td>
-                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{t.content.substring(0, 80)}...</td>
+                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{t.content.replace(/<[^>]*>/g, "").substring(0, 80)}...</td>
                     <td className="px-6 py-4 text-gray-600">{t._count.reviews}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(t.createdAt).toLocaleDateString("no-NO")}
@@ -429,7 +480,7 @@ export default function AdminAssignmentDetailPage() {
                       <div className="font-medium text-gray-900">{r.text.author.name}</div>
                       <div className="font-mono text-xs text-gray-500">{r.text.author.kandidatnummer}</div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{r.content.substring(0, 60)}...</td>
+                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{r.content.replace(/<[^>]*>/g, "").substring(0, 60)}...</td>
                     <td className="px-6 py-4">
                       {r.rejectedAt ? (
                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Underkjent</span>

@@ -71,9 +71,10 @@ export default function AssignmentDetailPage() {
     return () => clearInterval(interval);
   }, [assignment?.timerEndAt]);
 
-  // Poll for timer updates every 15 seconds
+  // Poll for timer updates every 15 seconds (only when timer is active)
+  const hasActiveTimer = !!(assignment?.timerEndAt && new Date(assignment.timerEndAt) > new Date());
   useEffect(() => {
-    if (!id) return;
+    if (!id || !hasActiveTimer) return;
     const poll = setInterval(async () => {
       try {
         const res = await fetch(`/api/assignments/${id}`);
@@ -81,7 +82,7 @@ export default function AssignmentDetailPage() {
       } catch { /* ignore */ }
     }, 15000);
     return () => clearInterval(poll);
-  }, [id]);
+  }, [id, hasActiveTimer]);
 
   useEffect(() => {
     async function load() {
@@ -159,14 +160,18 @@ export default function AssignmentDetailPage() {
           )}
 
           <div className="flex gap-6 text-sm text-gray-500">
-            <div>
-              <span className="font-medium text-gray-700">Skrivefrist:</span>{" "}
-              {new Date(assignment.writeDeadline).toLocaleString("no-NO")}
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Vurderingsfrist:</span>{" "}
-              {new Date(assignment.reviewDeadline).toLocaleString("no-NO")}
-            </div>
+            {new Date(assignment.writeDeadline).getFullYear() <= new Date().getFullYear() && (
+              <div>
+                <span className="font-medium text-gray-700">Skrivefrist:</span>{" "}
+                {new Date(assignment.writeDeadline).toLocaleString("no-NO")}
+              </div>
+            )}
+            {new Date(assignment.reviewDeadline).getFullYear() <= new Date().getFullYear() && (
+              <div>
+                <span className="font-medium text-gray-700">Vurderingsfrist:</span>{" "}
+                {new Date(assignment.reviewDeadline).toLocaleString("no-NO")}
+              </div>
+            )}
           </div>
         </div>
 

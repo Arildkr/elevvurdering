@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { RichTextViewer } from "@/components/RichTextEditor";
 
 interface Feedback {
   id: string;
@@ -109,7 +110,7 @@ export default function FeedbackPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-gray-700 whitespace-pre-wrap">{f.content}</p>
+                <RichTextViewer content={f.content} />
               </div>
             ))}
           </div>

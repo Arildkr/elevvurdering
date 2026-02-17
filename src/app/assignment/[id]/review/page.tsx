@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 
 interface ReviewAssignmentData {
   id: string;
@@ -31,11 +32,9 @@ export default function ReviewPage() {
           const data: ReviewAssignmentData[] = await res.json();
           setAssignments(data);
 
-          // Find first incomplete assignment
           const firstIncomplete = data.findIndex((a) => !a.completed);
           if (firstIncomplete >= 0) {
             setCurrentIndex(firstIncomplete);
-            // Restore from localStorage
             const saved = localStorage.getItem(`review-draft-${data[firstIncomplete].id}`);
             if (saved) setReviewContent(saved);
           } else if (data.length > 0) {
@@ -49,7 +48,6 @@ export default function ReviewPage() {
     load();
   }, [id]);
 
-  // Auto-save to localStorage
   const currentAssignment = assignments[currentIndex];
   const autoSave = useCallback(() => {
     if (currentAssignment && reviewContent.length > 0) {
@@ -61,6 +59,10 @@ export default function ReviewPage() {
     const interval = setInterval(autoSave, 5000);
     return () => clearInterval(interval);
   }, [autoSave]);
+
+  function textLength(html: string): number {
+    return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,10 +86,8 @@ export default function ReviewPage() {
         return;
       }
 
-      // Clear localStorage
       localStorage.removeItem(`review-draft-${currentAssignment.id}`);
 
-      // Move to next incomplete or show success
       const updatedAssignments = [...assignments];
       updatedAssignments[currentIndex] = { ...currentAssignment, completed: true };
       setAssignments(updatedAssignments);
@@ -166,6 +166,8 @@ export default function ReviewPage() {
     );
   }
 
+  const charCount = textLength(reviewContent);
+
   return (
     <div className="min-h-screen">
       <header className="bg-white border-b border-gray-200">
@@ -182,24 +184,25 @@ export default function ReviewPage() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-3">Tekst å vurdere</h2>
-          <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap text-gray-700 max-h-96 overflow-y-auto">
-            {currentAssignment?.textContent}
+          <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+            <RichTextViewer content={currentAssignment?.textContent || ""} />
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Din vurdering</h2>
           <form onSubmit={handleSubmit}>
-            <textarea
-              value={reviewContent}
-              onChange={(e) => setReviewContent(e.target.value)}
-              placeholder="Skriv din tilbakemelding her..."
-              rows={8}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 resize-y mb-2"
-            />
+            <div className="mb-2">
+              <RichTextEditor
+                content={reviewContent}
+                onChange={setReviewContent}
+                placeholder="Skriv din tilbakemelding her..."
+                minHeight="150px"
+              />
+            </div>
             <div className="flex justify-between items-center mb-4">
-              <p className={`text-sm ${reviewContent.length < 10 ? "text-amber-600" : "text-gray-500"}`}>
-                {reviewContent.length} / minimum 10 tegn
+              <p className={`text-sm ${charCount < 10 ? "text-amber-600" : "text-gray-500"}`}>
+                {charCount} / minimum 10 tegn
               </p>
               <p className="text-xs text-gray-400">Lagres automatisk</p>
             </div>
@@ -212,7 +215,7 @@ export default function ReviewPage() {
 
             <button
               type="submit"
-              disabled={submitting || reviewContent.length < 10}
+              disabled={submitting || charCount < 10}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Sender..." : "Send vurdering"}

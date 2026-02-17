@@ -117,13 +117,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ingen tilgang til denne gruppen" }, { status: 403 });
     }
 
+    // Default: far future (1 year) so assignment starts in "writing" phase immediately
+    const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const writeDeadline = parsed.data.writeDeadline
+      ? new Date(parsed.data.writeDeadline)
+      : farFuture;
+    const reviewDeadline = parsed.data.reviewDeadline
+      ? new Date(parsed.data.reviewDeadline)
+      : new Date(farFuture.getTime() + 24 * 60 * 60 * 1000);
+
     const assignment = await prisma.assignment.create({
       data: {
         groupId: parsed.data.groupId,
         title: parsed.data.title,
         description: parsed.data.description,
-        writeDeadline: new Date(parsed.data.writeDeadline),
-        reviewDeadline: new Date(parsed.data.reviewDeadline),
+        writeDeadline,
+        reviewDeadline,
         minReviews: parsed.data.minReviews,
         feedbackDeadline: parsed.data.feedbackDeadline
           ? new Date(parsed.data.feedbackDeadline)

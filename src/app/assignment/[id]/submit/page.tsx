@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 
 export default function SubmitTextPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +36,11 @@ export default function SubmitTextPage() {
     }
     load();
   }, [id, router]);
+
+  // Strip HTML tags for character counting
+  function textLength(html: string): number {
+    return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,8 +90,8 @@ export default function SubmitTextPage() {
         <main className="max-w-3xl mx-auto px-4 py-8">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h1 className="text-xl font-bold text-gray-900 mb-4">Din tekst</h1>
-            <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap text-gray-700">
-              {content}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <RichTextViewer content={content} />
             </div>
             <p className="text-sm text-gray-500 mt-4">
               Teksten kan ikke redigeres (frist utløpt eller tildeling er gjort).
@@ -95,6 +101,8 @@ export default function SubmitTextPage() {
       </div>
     );
   }
+
+  const charCount = textLength(content);
 
   return (
     <div className="min-h-screen">
@@ -114,16 +122,15 @@ export default function SubmitTextPage() {
 
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+              <RichTextEditor
+                content={content}
+                onChange={setContent}
                 placeholder="Skriv teksten din her..."
-                rows={15}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 resize-y"
+                minHeight="300px"
               />
-              <div className="flex justify-between mt-1">
-                <p className={`text-sm ${content.length < 50 ? "text-amber-600" : "text-gray-500"}`}>
-                  {content.length} / minimum 50 tegn
+              <div className="flex justify-between mt-2">
+                <p className={`text-sm ${charCount < 50 ? "text-amber-600" : "text-gray-500"}`}>
+                  {charCount} / minimum 50 tegn
                 </p>
               </div>
             </div>
@@ -136,7 +143,7 @@ export default function SubmitTextPage() {
 
             <button
               type="submit"
-              disabled={submitting || content.length < 50}
+              disabled={submitting || charCount < 50}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Lagrer..." : existingText ? "Lagre endringer" : "Lever tekst"}

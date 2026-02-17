@@ -96,9 +96,9 @@ export default function DashboardPage() {
     load();
   }, [router]);
 
-  // Poll for timer updates every 15 seconds
+  // Poll for timer updates every 15 seconds (stable dependency)
+  const hasActiveTimer = assignments.some((a) => a.timerEndAt && new Date(a.timerEndAt) > new Date());
   useEffect(() => {
-    const hasActiveTimer = assignments.some((a) => a.timerEndAt && new Date(a.timerEndAt) > new Date());
     if (!hasActiveTimer) return;
     const poll = setInterval(async () => {
       try {
@@ -107,7 +107,7 @@ export default function DashboardPage() {
       } catch { /* ignore */ }
     }, 15000);
     return () => clearInterval(poll);
-  }, [assignments]);
+  }, [hasActiveTimer]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
