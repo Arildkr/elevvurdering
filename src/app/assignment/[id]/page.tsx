@@ -14,6 +14,8 @@ interface Assignment {
   distributionDone: boolean;
   feedbackAvailable: boolean;
   feedbackDeadline: string | null;
+  timerEndAt: string | null;
+  timerLabel: string | null;
   groupName: string;
   phase: "writing" | "review" | "closed";
 }
@@ -44,6 +46,42 @@ export default function AssignmentDetailPage() {
   const [reviewAssignments, setReviewAssignments] = useState<ReviewAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [requestingMore, setRequestingMore] = useState(false);
+  const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
+
+  // Timer countdown
+  useEffect(() => {
+    if (!assignment?.timerEndAt) {
+      setTimerRemaining(null);
+      return;
+    }
+    function tick() {
+      const end = new Date(assignment!.timerEndAt!).getTime();
+      const now = Date.now();
+      const diff = end - now;
+      if (diff <= 0) {
+        setTimerRemaining("00:00");
+        return;
+      }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimerRemaining(`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+    }
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [assignment?.timerEndAt]);
+
+  // Poll for timer updates every 15 seconds
+  useEffect(() => {
+    if (!id) return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/assignments/${id}`);
+        if (res.ok) setAssignment(await res.json());
+      } catch { /* ignore */ }
+    }, 15000);
+    return () => clearInterval(poll);
+  }, [id]);
 
   useEffect(() => {
     async function load() {
@@ -131,6 +169,31 @@ export default function AssignmentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Timer */}
+        {assignment.timerEndAt && timerRemaining !== null && (
+          <div className={`rounded-xl border-2 p-6 mb-6 text-center ${
+            timerRemaining === "00:00"
+              ? "border-red-300 bg-red-50"
+              : "border-blue-300 bg-blue-50"
+          }`}>
+            <div className={`text-5xl font-mono font-bold ${
+              timerRemaining === "00:00" ? "text-red-600" : "text-blue-600"
+            }`}>
+              {timerRemaining}
+            </div>
+            {assignment.timerLabel && (
+              <p className={`text-sm mt-2 font-medium ${
+                timerRemaining === "00:00" ? "text-red-600" : "text-blue-600"
+              }`}>
+                {assignment.timerLabel}
+              </p>
+            )}
+            {timerRemaining === "00:00" && (
+              <p className="text-red-600 font-semibold mt-1">Tiden er ute!</p>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="space-y-4">

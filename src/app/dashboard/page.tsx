@@ -15,6 +15,8 @@ interface Assignment {
   hasSubmitted: boolean;
   unreadCount: number;
   pendingReviews: number;
+  timerEndAt: string | null;
+  timerLabel: string | null;
 }
 
 interface User {
@@ -22,6 +24,39 @@ interface User {
   name: string;
   kandidatnummer: string;
   isAdmin: boolean;
+}
+
+function useCountdown(endAt: string | null): string | null {
+  const [remaining, setRemaining] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!endAt) { setRemaining(null); return; }
+    function tick() {
+      const diff = new Date(endAt!).getTime() - Date.now();
+      if (diff <= 0) { setRemaining("00:00"); return; }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setRemaining(`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+    }
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [endAt]);
+
+  return remaining;
+}
+
+function TimerBadge({ endAt, label }: { endAt: string; label: string | null }) {
+  const remaining = useCountdown(endAt);
+  if (!remaining) return null;
+  const expired = remaining === "00:00";
+  return (
+    <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${
+      expired ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+    }`}>
+      {remaining}{label ? ` · ${label}` : ""}
+    </span>
+  );
 }
 
 const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket" };
@@ -61,6 +96,19 @@ export default function DashboardPage() {
     load();
   }, [router]);
 
+  // Poll for timer updates every 15 seconds
+  useEffect(() => {
+    const hasActiveTimer = assignments.some((a) => a.timerEndAt && new Date(a.timerEndAt) > new Date());
+    if (!hasActiveTimer) return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch("/api/assignments");
+        if (res.ok) setAssignments(await res.json());
+      } catch { /* ignore */ }
+    }, 15000);
+    return () => clearInterval(poll);
+  }, [assignments]);
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
@@ -80,7 +128,7 @@ export default function DashboardPage() {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Elevvurdering</h1>
-            <p className="text-sm text-gray-500">Velkommen, {user?.name}</p>
+            <p className="text-sm text-gray-600">Velkommen, {user?.name}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -112,6 +160,9 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-500">{a.groupName}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {a.timerEndAt && (
+                      <TimerBadge endAt={a.timerEndAt} label={a.timerLabel} />
+                    )}
                     {a.unreadCount > 0 && (
                       <span className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                         {a.unreadCount} ulest{a.unreadCount > 1 ? "e" : ""}
@@ -123,19 +174,19 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 text-sm text-gray-500">
+                <div className="flex gap-4 text-sm text-gray-600">
                   <span>Skrivefrist: {new Date(a.writeDeadline).toLocaleDateString("no-NO")}</span>
                   <span>Vurderingsfrist: {new Date(a.reviewDeadline).toLocaleDateString("no-NO")}</span>
                 </div>
 
                 <div className="mt-3 flex gap-3 text-sm">
                   {a.hasSubmitted ? (
-                    <span className="text-green-600">Tekst levert</span>
+                    <span className="text-green-700 font-medium">Tekst levert</span>
                   ) : a.phase === "writing" ? (
-                    <span className="text-amber-600">Tekst ikke levert</span>
+                    <span className="text-amber-700 font-medium">Tekst ikke levert</span>
                   ) : null}
                   {a.pendingReviews > 0 && (
-                    <span className="text-blue-600">{a.pendingReviews} vurdering(er) gjenstår</span>
+                    <span className="text-blue-700 font-medium">{a.pendingReviews} vurdering(er) gjenstår</span>
                   )}
                 </div>
               </Link>

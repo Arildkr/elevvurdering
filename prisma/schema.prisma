@@ -57,6 +57,8 @@ model Assignment {
   distributionDone Boolean   @default(false)
   feedbackOpen     Boolean   @default(false)
   feedbackDeadline DateTime?
+  timerEndAt       DateTime?
+  timerLabel       String?
   createdAt        DateTime  @default(now())
 
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)

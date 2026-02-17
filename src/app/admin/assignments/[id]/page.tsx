@@ -14,6 +14,8 @@ interface AssignmentDetail {
   distributionDone: boolean;
   feedbackOpen: boolean;
   feedbackDeadline: string | null;
+  timerEndAt: string | null;
+  timerLabel: string | null;
   group: { id: string; name: string };
   phase: "writing" | "review" | "closed";
   stats: {
@@ -57,6 +59,9 @@ export default function AdminAssignmentDetailPage() {
   const [distributing, setDistributing] = useState(false);
   const [togglingFeedback, setTogglingFeedback] = useState(false);
   const [tab, setTab] = useState<"overview" | "texts" | "reviews">("overview");
+  const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
+  const [customMinutes, setCustomMinutes] = useState(10);
+  const [timerLabel, setTimerLabel] = useState("");
 
   useEffect(() => {
     loadData();
@@ -111,6 +116,51 @@ export default function AdminAssignmentDetailPage() {
       }
     } finally {
       setTogglingFeedback(false);
+    }
+  }
+
+  // Timer countdown
+  useEffect(() => {
+    if (!assignment?.timerEndAt) {
+      setTimerRemaining(null);
+      return;
+    }
+    function tick() {
+      const end = new Date(assignment!.timerEndAt!).getTime();
+      const now = Date.now();
+      const diff = end - now;
+      if (diff <= 0) {
+        setTimerRemaining("00:00");
+        return;
+      }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimerRemaining(`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+    }
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [assignment?.timerEndAt]);
+
+  async function handleStartTimer(minutes: number) {
+    const label = timerLabel || phaseLabels[assignment!.phase];
+    const res = await fetch(`/api/assignments/${id}/timer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ durationMinutes: minutes, label }),
+    });
+    if (res.ok) {
+      loadData();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Noe gikk galt");
+    }
+  }
+
+  async function handleStopTimer() {
+    const res = await fetch(`/api/assignments/${id}/timer`, { method: "DELETE" });
+    if (res.ok) {
+      loadData();
     }
   }
 
@@ -196,6 +246,71 @@ export default function AdminAssignmentDetailPage() {
         >
           Eksporter CSV
         </a>
+      </div>
+
+      {/* Timer */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+        <h3 className="font-semibold text-gray-900 mb-3">Klasseromstimer</h3>
+        {assignment.timerEndAt && timerRemaining !== null ? (
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className={`text-4xl font-mono font-bold ${timerRemaining === "00:00" ? "text-red-600" : "text-blue-600"}`}>
+                {timerRemaining}
+              </div>
+              {assignment.timerLabel && (
+                <p className="text-sm text-gray-500 mt-1">{assignment.timerLabel}</p>
+              )}
+              {timerRemaining === "00:00" && (
+                <p className="text-sm text-red-600 font-medium mt-1">Tiden er ute!</p>
+              )}
+            </div>
+            <button
+              onClick={handleStopTimer}
+              className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+            >
+              Stopp timer
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[5, 10, 15, 20, 30].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => handleStartTimer(m)}
+                  className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  {m} min
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+                min={1}
+                max={180}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+              />
+              <span className="text-sm text-gray-500">min</span>
+              <input
+                type="text"
+                value={timerLabel}
+                onChange={(e) => setTimerLabel(e.target.value)}
+                placeholder={phaseLabels[assignment.phase]}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+              />
+              <button
+                onClick={() => handleStartTimer(customMinutes)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                Start
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Elevene ser nedtellingen i sanntid på sine skjermer.</p>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

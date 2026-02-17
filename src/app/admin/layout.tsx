@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/login");
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-500">Laster...</div>

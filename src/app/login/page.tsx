@@ -88,7 +88,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Første gang?{" "}
+              Første innlogging?{" "}
               <Link
                 href="/register"
                 className="text-blue-600 hover:text-blue-700 font-medium"

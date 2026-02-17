@@ -80,6 +80,8 @@ export async function GET() {
           hasSubmitted: !!text,
           unreadCount,
           pendingReviews,
+          timerEndAt: a.timerEndAt,
+          timerLabel: a.timerLabel,
         };
       })
     );

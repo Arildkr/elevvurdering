@@ -122,17 +122,28 @@ export default function AdminAssignmentsPage() {
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gruppe</label>
-              <select
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                required
-              >
-                <option value="">Velg gruppe...</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+              {groups.length === 0 ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                  <p className="text-sm text-yellow-800">
+                    Du har ingen grupper ennå.{" "}
+                    <Link href="/admin/groups" className="font-medium underline hover:text-yellow-900">
+                      Opprett en gruppe først
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  required
+                >
+                  <option value="">Velg gruppe...</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tittel</label>

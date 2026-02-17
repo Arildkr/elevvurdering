@@ -90,6 +90,8 @@ export async function GET(
       distributionDone: assignment.distributionDone,
       feedbackAvailable: !!feedbackAvailable,
       feedbackDeadline: assignment.feedbackDeadline,
+      timerEndAt: assignment.timerEndAt,
+      timerLabel: assignment.timerLabel,
       groupName: assignment.group.name,
       phase,
     });
