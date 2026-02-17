@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  kandidatnummer String   @unique
+  isAdmin        Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  sessions         Session[]
+  groupMemberships GroupMember[]
+  createdGroups    Group[]            @relation("GroupAdmin")
+  texts            Text[]
+  reviewAssignments ReviewAssignment[] @relation("Reviewer")
+  reviews          Review[]           @relation("ReviewAuthor")
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  joinCode  String   @unique
+  adminId   String
+  createdAt DateTime @default(now())
+
+  admin       User          @relation("GroupAdmin", fields: [adminId], references: [id])
+  members     GroupMember[]
+  assignments Assignment[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+}
+
+model Assignment {
+  id               String   @id @default(cuid())
+  groupId          String
+  title            String
+  description      String?
+  writeDeadline    DateTime
+  reviewDeadline   DateTime
+  minReviews       Int       @default(1)
+  distributionDone Boolean   @default(false)
+  feedbackOpen     Boolean   @default(false)
+  feedbackDeadline DateTime?
+  createdAt        DateTime  @default(now())
+
+  group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  texts             Text[]
+  reviewAssignments ReviewAssignment[]
+}
+
+model Text {
+  id           String   @id @default(cuid())
+  assignmentId String
+  authorId     String
+  content      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignment        Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  author            User               @relation(fields: [authorId], references: [id])
+  reviewAssignments ReviewAssignment[]
+  reviews           Review[]
+
+  @@unique([assignmentId, authorId])
+}
+
+model ReviewAssignment {
+  id           String   @id @default(cuid())
+  assignmentId String
+  textId       String
+  reviewerId   String
+  completed    Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  text       Text       @relation(fields: [textId], references: [id], onDelete: Cascade)
+  reviewer   User       @relation("Reviewer", fields: [reviewerId], references: [id])
+  review     Review?
+
+  @@unique([textId, reviewerId])
+  @@index([reviewerId])
+  @@index([assignmentId])
+}
+
+model Review {
+  id                 String    @id @default(cuid())
+  reviewAssignmentId String    @unique
+  textId             String
+  reviewerId         String
+  content            String
+  createdAt          DateTime  @default(now())
+  readAt             DateTime?
+  rejectedAt         DateTime?
+
+  reviewAssignment ReviewAssignment @relation(fields: [reviewAssignmentId], references: [id], onDelete: Cascade)
+  text             Text             @relation(fields: [textId], references: [id], onDelete: Cascade)
+  reviewer         User             @relation("ReviewAuthor", fields: [reviewerId], references: [id])
+
+  @@index([textId])
+  @@index([reviewerId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
