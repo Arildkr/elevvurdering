@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, type TransactionClient } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { getAssignmentPhase, canReview } from "@/lib/phase";
 import { createReviewSchema } from "@/lib/validation/review";
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create review and mark assignment as completed in a transaction
-    const review = await prisma.$transaction(async (tx) => {
+    const review = await prisma.$transaction(async (tx: TransactionClient) => {
       const newReview = await tx.review.create({
         data: {
           reviewAssignmentId,

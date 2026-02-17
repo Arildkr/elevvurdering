@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, type TransactionClient } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { generateUniqueCandidateNumber } from "@/lib/candidate-number";
 import { registerSchema } from "@/lib/validation/auth";
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const kandidatnummer = await generateUniqueCandidateNumber();
 
     // Create user and group membership in a transaction
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: TransactionClient) => {
       const newUser = await tx.user.create({
         data: {
           name,

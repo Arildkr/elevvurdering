@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, type TransactionClient } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
 export async function PATCH(
@@ -20,7 +20,7 @@ export async function PATCH(
     }
 
     // Reject review and mark assignment as incomplete again
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       await tx.review.update({
         where: { id },
         data: { rejectedAt: new Date() },
