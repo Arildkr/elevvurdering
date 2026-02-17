@@ -30,7 +30,7 @@ export async function GET(
     });
 
     return NextResponse.json(
-      assignments.map((a) => ({
+      assignments.map((a: typeof assignments[number]) => ({
         id: a.id,
         textId: a.text.id,
         textContent: a.text.content,
