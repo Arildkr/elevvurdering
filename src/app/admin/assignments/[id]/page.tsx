@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface AssignmentDetail {
@@ -52,6 +52,7 @@ const phaseColors = {
 
 export default function AdminAssignmentDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
   const [texts, setTexts] = useState<TextData[]>([]);
   const [reviews, setReviews] = useState<ReviewData[]>([]);
@@ -177,6 +178,21 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!confirm("Er du sikker på at du vil slette denne oppgaven? Alle tekster og vurderinger slettes permanent.")) return;
+    try {
+      const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/admin/assignments");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } catch {
+      alert("Noe gikk galt");
+    }
+  }
+
   async function handlePhaseChange(phase: "writing" | "review" | "closed") {
     const labels = { writing: "skrivefase", review: "vurderingsfase", closed: "lukket" };
     if (!confirm(`Bytte til ${labels[phase]}?`)) return;
@@ -289,6 +305,12 @@ export default function AdminAssignmentDetailPage() {
         >
           Eksporter CSV
         </a>
+        <button
+          onClick={handleDelete}
+          className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors ml-auto"
+        >
+          Slett oppgave
+        </button>
       </div>
 
       {/* Timer */}

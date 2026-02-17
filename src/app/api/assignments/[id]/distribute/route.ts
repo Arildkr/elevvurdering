@@ -22,6 +22,21 @@ export async function POST(
 
     const count = await distributeReviews(id);
 
+    // Auto-advance to review phase if currently in writing phase
+    const now = new Date();
+    const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    if (assignment.writeDeadline > now) {
+      await prisma.assignment.update({
+        where: { id },
+        data: {
+          writeDeadline: new Date(now.getTime() - 1000),
+          reviewDeadline: assignment.reviewDeadline > farFuture
+            ? farFuture
+            : assignment.reviewDeadline,
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       assignmentsCreated: count,

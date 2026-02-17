@@ -76,14 +76,14 @@ export default function RichTextEditor({
           active={editor.isActive("heading", { level: 2 })}
           title="Overskrift"
         >
-          H2
+          <span className="text-xs font-bold">Overskrift</span>
         </MenuButton>
         <MenuButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           active={editor.isActive("heading", { level: 3 })}
           title="Underoverskrift"
         >
-          H3
+          <span className="text-xs font-bold">Underoverskrift</span>
         </MenuButton>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
@@ -93,28 +93,28 @@ export default function RichTextEditor({
           active={editor.isActive("bold")}
           title="Fet (Ctrl+B)"
         >
-          <strong>B</strong>
+          <strong>Fet</strong>
         </MenuButton>
         <MenuButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
           title="Kursiv (Ctrl+I)"
         >
-          <em>I</em>
+          <em>Kursiv</em>
         </MenuButton>
         <MenuButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           active={editor.isActive("underline")}
           title="Understrek (Ctrl+U)"
         >
-          <span className="underline">U</span>
+          <span className="underline">Understrek</span>
         </MenuButton>
         <MenuButton
           onClick={() => editor.chain().focus().toggleHighlight().run()}
           active={editor.isActive("highlight")}
           title="Utheving"
         >
-          <span className="bg-yellow-200 px-0.5">A</span>
+          <span className="bg-yellow-200 px-0.5 rounded">Utheving</span>
         </MenuButton>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
@@ -124,14 +124,16 @@ export default function RichTextEditor({
           active={editor.isActive("bulletList")}
           title="Punktliste"
         >
-          &#8226; Liste
+          <svg className="w-4 h-4 inline mr-0.5" viewBox="0 0 20 20" fill="currentColor"><circle cx="3" cy="5" r="2"/><rect x="7" y="4" width="12" height="2" rx="1"/><circle cx="3" cy="10" r="2"/><rect x="7" y="9" width="12" height="2" rx="1"/><circle cx="3" cy="15" r="2"/><rect x="7" y="14" width="12" height="2" rx="1"/></svg>
+          <span className="text-xs">Punktliste</span>
         </MenuButton>
         <MenuButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
           title="Nummerert liste"
         >
-          1. Liste
+          <svg className="w-4 h-4 inline mr-0.5" viewBox="0 0 20 20" fill="currentColor"><text x="0" y="7" fontSize="6" fontWeight="bold">1.</text><rect x="7" y="4" width="12" height="2" rx="1"/><text x="0" y="12" fontSize="6" fontWeight="bold">2.</text><rect x="7" y="9" width="12" height="2" rx="1"/><text x="0" y="17" fontSize="6" fontWeight="bold">3.</text><rect x="7" y="14" width="12" height="2" rx="1"/></svg>
+          <span className="text-xs">Nummerert</span>
         </MenuButton>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Group {
@@ -27,6 +28,7 @@ const phaseColors = {
 };
 
 export default function AdminAssignmentsPage() {
+  const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,61 +170,63 @@ export default function AdminAssignmentsPage() {
             <p className="text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
               Oppgaven aktiveres med en gang i skrivefase. Du styrer fasene manuelt fra oppgavesiden, eller kan sette frister under avanserte innstillinger.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {showAdvanced ? "Skjul avanserte innstillinger" : "Vis avanserte innstillinger"}
-            </button>
-            {showAdvanced && (
-              <div className="space-y-4 border-t border-gray-100 pt-4">
-                <div className="grid grid-cols-2 gap-4">
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {showAdvanced ? "Skjul avanserte innstillinger \u25B2" : "Vis avanserte innstillinger \u25BC"}
+              </button>
+              {showAdvanced && (
+                <div className="space-y-4 border-t border-gray-100 pt-4 mt-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Skrivefrist (valgfritt)</label>
+                      <input
+                        type="datetime-local"
+                        value={writeDeadline}
+                        onChange={(e) => setWriteDeadline(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Vurderingsfrist (valgfritt)</label>
+                      <input
+                        type="datetime-local"
+                        value={reviewDeadline}
+                        onChange={(e) => setReviewDeadline(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Skrivefrist (valgfritt)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tilbakemeldingsfrist (valgfritt)
+                    </label>
                     <input
                       type="datetime-local"
-                      value={writeDeadline}
-                      onChange={(e) => setWriteDeadline(e.target.value)}
+                      value={feedbackDeadline}
+                      onChange={(e) => setFeedbackDeadline(e.target.value)}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Vurderingsfrist (valgfritt)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum antall vurderinger per elev
+                    </label>
                     <input
-                      type="datetime-local"
-                      value={reviewDeadline}
-                      onChange={(e) => setReviewDeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      type="number"
+                      value={minReviews}
+                      onChange={(e) => setMinReviews(parseInt(e.target.value))}
+                      min={1}
+                      max={10}
+                      className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tilbakemeldingsfrist (valgfritt)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={feedbackDeadline}
-                    onChange={(e) => setFeedbackDeadline(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum antall vurderinger per elev
-                  </label>
-                  <input
-                    type="number"
-                    value={minReviews}
-                    onChange={(e) => setMinReviews(parseInt(e.target.value))}
-                    min={1}
-                    max={10}
-                    className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  />
-                </div>
-              </div>
-            )}
+              )}
+            </div>
             {formError && (
               <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{formError}</div>
             )}
@@ -251,12 +255,15 @@ export default function AdminAssignmentsPage() {
                 <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Fase</th>
                 <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tekster</th>
                 <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tildelt</th>
-                <th className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {assignments.map((a) => (
-                <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr
+                  key={a.id}
+                  onClick={() => router.push(`/admin/assignments/${a.id}`)}
+                  className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-6 py-4 font-medium text-gray-900">{a.title}</td>
                   <td className="px-6 py-4 text-gray-600">{a.group.name}</td>
                   <td className="px-6 py-4">
@@ -271,14 +278,6 @@ export default function AdminAssignmentsPage() {
                     ) : (
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Nei</span>
                     )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Link
-                      href={`/admin/assignments/${a.id}`}
-                      className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                      Detaljer
-                    </Link>
                   </td>
                 </tr>
               ))}
