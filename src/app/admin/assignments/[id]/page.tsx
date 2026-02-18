@@ -60,6 +60,8 @@ export default function AdminAssignmentDetailPage() {
   const [distributing, setDistributing] = useState(false);
   const [togglingFeedback, setTogglingFeedback] = useState(false);
   const [tab, setTab] = useState<"overview" | "texts" | "reviews">("overview");
+  const [expandedText, setExpandedText] = useState<string | null>(null);
+  const [expandedReview, setExpandedReview] = useState<string | null>(null);
   const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState(10);
   const [timerLabel, setTimerLabel] = useState("");
@@ -303,6 +305,12 @@ export default function AdminAssignmentDetailPage() {
           href={`/api/assignments/${id}/export`}
           className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
         >
+          Eksporter HTML
+        </a>
+        <a
+          href={`/api/assignments/${id}/export?format=csv`}
+          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+        >
           Eksporter CSV
         </a>
         <button
@@ -444,86 +452,86 @@ export default function AdminAssignmentDetailPage() {
       )}
 
       {tab === "texts" && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="space-y-3">
           {texts.length === 0 ? (
-            <p className="p-6 text-gray-500">Ingen tekster levert ennå.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <p className="text-gray-500">Ingen tekster levert ennå.</p>
+            </div>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Forfatter</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Kandidatnr.</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Utdrag</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Vurderinger</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Dato</th>
-                </tr>
-              </thead>
-              <tbody>
-                {texts.map((t) => (
-                  <tr key={t.id} className="border-b border-gray-100">
-                    <td className="px-6 py-4 font-medium text-gray-900">{t.author.name}</td>
-                    <td className="px-6 py-4 font-mono text-sm text-gray-600">{t.author.kandidatnummer}</td>
-                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{t.content.replace(/<[^>]*>/g, "").substring(0, 80)}...</td>
-                    <td className="px-6 py-4 text-gray-600">{t._count.reviews}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(t.createdAt).toLocaleDateString("no-NO")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            texts.map((t) => (
+              <div key={t.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => setExpandedText(expandedText === t.id ? null : t.id)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="font-medium text-gray-900">{t.author.name}</span>
+                      <span className="font-mono text-xs text-gray-500 ml-2">{t.author.kandidatnummer}</span>
+                    </div>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t._count.reviews} vurderinger</span>
+                  </div>
+                  <span className="text-gray-400 text-sm">{expandedText === t.id ? "\u25B2" : "\u25BC"}</span>
+                </button>
+                {expandedText === t.id && (
+                  <div className="px-6 pb-4 border-t border-gray-100">
+                    <div className="prose prose-sm max-w-none text-gray-700 mt-4" dangerouslySetInnerHTML={{ __html: t.content }} />
+                    <p className="text-xs text-gray-400 mt-3">Levert: {new Date(t.createdAt).toLocaleString("no-NO")}</p>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
       )}
 
       {tab === "reviews" && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="space-y-3">
           {reviews.length === 0 ? (
-            <p className="p-6 text-gray-500">Ingen vurderinger ennå.</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <p className="text-gray-500">Ingen vurderinger ennå.</p>
+            </div>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Reviewer</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Forfatter</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Utdrag</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
-                  <th className="px-6 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {reviews.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-100">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{r.reviewer.name}</div>
-                      <div className="font-mono text-xs text-gray-500">{r.reviewer.kandidatnummer}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{r.text.author.name}</div>
-                      <div className="font-mono text-xs text-gray-500">{r.text.author.kandidatnummer}</div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{r.content.replace(/<[^>]*>/g, "").substring(0, 60)}...</td>
-                    <td className="px-6 py-4">
-                      {r.rejectedAt ? (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Underkjent</span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Godkjent</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
+            reviews.map((r) => (
+              <div key={r.id} className={`bg-white rounded-xl border overflow-hidden ${r.rejectedAt ? "border-red-200" : "border-gray-200"}`}>
+                <button
+                  onClick={() => setExpandedReview(expandedReview === r.id ? null : r.id)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div>
+                      <span className="font-medium text-gray-900">{r.reviewer.name}</span>
+                      <span className="text-gray-400 mx-1">&rarr;</span>
+                      <span className="text-gray-600">{r.text.author.name}</span>
+                    </div>
+                    {r.rejectedAt ? (
+                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">Underkjent</span>
+                    ) : (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Godkjent</span>
+                    )}
+                  </div>
+                  <span className="text-gray-400 text-sm">{expandedReview === r.id ? "\u25B2" : "\u25BC"}</span>
+                </button>
+                {expandedReview === r.id && (
+                  <div className="px-6 pb-4 border-t border-gray-100">
+                    <div className="prose prose-sm max-w-none text-gray-700 mt-4" dangerouslySetInnerHTML={{ __html: r.content }} />
+                    <div className="flex items-center gap-3 mt-3">
+                      <p className="text-xs text-gray-400">
+                        {new Date(r.createdAt).toLocaleString("no-NO")}
+                      </p>
                       {!r.rejectedAt && (
                         <button
-                          onClick={() => handleReject(r.id)}
-                          className="text-red-600 hover:text-red-700 text-sm font-medium"
+                          onClick={(e) => { e.stopPropagation(); handleReject(r.id); }}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium"
                         >
                           Underkjenn
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
       )}

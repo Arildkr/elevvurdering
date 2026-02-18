@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, type TransactionClient } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { getAssignmentPhase, canReview } from "@/lib/phase";
+import { getAssignmentPhase } from "@/lib/phase";
 import { createReviewSchema } from "@/lib/validation/review";
 
 export async function POST(request: NextRequest) {
@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
       reviewAssignment.assignment.reviewDeadline
     );
 
-    if (!canReview(phase)) {
-      return NextResponse.json({ error: "Vurderingsperioden er ikke aktiv" }, { status: 403 });
+    if (phase === "closed") {
+      return NextResponse.json({ error: "Oppgaven er lukket" }, { status: 403 });
     }
 
     // Create review and mark assignment as completed in a transaction

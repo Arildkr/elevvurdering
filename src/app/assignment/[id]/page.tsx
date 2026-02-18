@@ -230,33 +230,43 @@ export default function AssignmentDetailPage() {
           )}
 
           {/* Review section */}
-          {(assignment.phase === "review" || assignment.phase === "closed") && (
+          {(reviewAssignments.length > 0 || assignment.phase === "review" || assignment.phase === "closed") && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-900 mb-2">Vurderinger</h2>
-              <div className="text-sm text-gray-600 mb-3">
-                {completedReviews.length} fullført, {pendingReviews.length} gjenstår
-              </div>
+              {reviewAssignments.length > 0 ? (
+                <>
+                  <div className="text-sm text-gray-600 mb-3">
+                    {completedReviews.length} fullført, {pendingReviews.length} gjenstår
+                  </div>
 
-              {pendingReviews.length > 0 && assignment.phase === "review" && (
-                <Link
-                  href={`/assignment/${id}/review`}
-                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors mr-3"
-                >
-                  Vurder tildelt tekst
-                </Link>
+                  {pendingReviews.length > 0 && (
+                    <Link
+                      href={`/assignment/${id}/review`}
+                      className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors mr-3"
+                    >
+                      Vurder tildelt tekst
+                    </Link>
+                  )}
+
+                  {pendingReviews.length === 0 &&
+                    completedReviews.length > 0 &&
+                    assignment.phase === "review" && (
+                      <button
+                        onClick={handleRequestMore}
+                        disabled={requestingMore}
+                        className="inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                      >
+                        {requestingMore ? "Henter..." : "Be om flere tekster å vurdere"}
+                      </button>
+                    )}
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  {assignment.distributionDone
+                    ? "Du har ingen tildelte tekster."
+                    : "Tekster er ikke tildelt ennå."}
+                </p>
               )}
-
-              {pendingReviews.length === 0 &&
-                completedReviews.length > 0 &&
-                assignment.phase === "review" && (
-                  <button
-                    onClick={handleRequestMore}
-                    disabled={requestingMore}
-                    className="inline-block bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
-                  >
-                    {requestingMore ? "Henter..." : "Be om flere tekster å vurdere"}
-                  </button>
-                )}
             </div>
           )}
 
