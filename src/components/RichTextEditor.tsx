@@ -72,18 +72,18 @@ export default function RichTextEditor({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
         <MenuButton
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          active={!editor.isActive("heading")}
+          title="Vanlig tekst"
+        >
+          <span className="text-xs">Normal</span>
+        </MenuButton>
+        <MenuButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive("heading", { level: 2 })}
           title="Overskrift"
         >
           <span className="text-xs font-bold">Overskrift</span>
-        </MenuButton>
-        <MenuButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          active={editor.isActive("heading", { level: 3 })}
-          title="Underoverskrift"
-        >
-          <span className="text-xs font-bold">Underoverskrift</span>
         </MenuButton>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
