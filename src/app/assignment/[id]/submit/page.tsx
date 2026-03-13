@@ -34,12 +34,17 @@ export default function SubmitTextPage() {
           }
           if (!data.canSubmit && !data.text) {
             router.push(`/assignment/${id}`);
+            return;
           }
         }
         if (assignRes.ok) {
           const aData = await assignRes.json();
           setTimerEndAt(aData.timerEndAt);
           setTimerLabel(aData.timerLabel);
+          if (aData.phase === "paused") {
+            router.push(`/assignment/${id}`);
+            return;
+          }
         }
       } finally {
         setLoading(false);

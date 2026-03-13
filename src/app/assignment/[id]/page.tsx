@@ -16,8 +16,9 @@ interface Assignment {
   feedbackDeadline: string | null;
   timerEndAt: string | null;
   timerLabel: string | null;
+  isPaused: boolean;
   groupName: string;
-  phase: "writing" | "review" | "closed";
+  phase: "writing" | "review" | "closed" | "paused";
 }
 
 interface TextStatus {
@@ -31,11 +32,12 @@ interface ReviewAssignment {
   completed: boolean;
 }
 
-const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket" };
+const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
   closed: "bg-gray-100 text-gray-600",
+  paused: "bg-orange-100 text-orange-800",
 };
 
 export default function AssignmentDetailPage() {
@@ -71,18 +73,17 @@ export default function AssignmentDetailPage() {
     return () => clearInterval(interval);
   }, [assignment?.timerEndAt]);
 
-  // Poll for timer updates every 15 seconds (only when timer is active)
-  const hasActiveTimer = !!(assignment?.timerEndAt && new Date(assignment.timerEndAt) > new Date());
+  // Poll every 5 seconds for real-time updates (phase changes, timer, etc.)
   useEffect(() => {
-    if (!id || !hasActiveTimer) return;
+    if (!id) return;
     const poll = setInterval(async () => {
       try {
         const res = await fetch(`/api/assignments/${id}`);
         if (res.ok) setAssignment(await res.json());
       } catch { /* ignore */ }
-    }, 15000);
+    }, 5000);
     return () => clearInterval(poll);
-  }, [id, hasActiveTimer]);
+  }, [id]);
 
   useEffect(() => {
     async function load() {
@@ -200,16 +201,24 @@ export default function AssignmentDetailPage() {
           </div>
         )}
 
+        {/* Paused banner */}
+        {assignment.phase === "paused" && (
+          <div className="rounded-xl border-2 border-orange-300 bg-orange-50 p-4 mb-6 text-center">
+            <p className="text-orange-800 font-semibold">Oppgaven er midlertidig pauset av læreren.</p>
+            <p className="text-orange-700 text-sm mt-1">Vent til læreren gjenopptar oppgaven.</p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="space-y-4">
           {/* Text submission */}
-          {assignment.phase === "writing" && (
+          {(assignment.phase === "writing" || (assignment.phase === "paused" && textStatus?.text)) && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="font-semibold text-gray-900 mb-2">Lever tekst</h2>
+              <h2 className="font-semibold text-gray-900 mb-2">Din tekst</h2>
               {textStatus?.text ? (
                 <div>
                   <p className="text-green-600 text-sm mb-3">Du har levert tekst.</p>
-                  {textStatus.canEdit && (
+                  {textStatus.canEdit && assignment.phase === "writing" && (
                     <Link
                       href={`/assignment/${id}/submit`}
                       className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -218,14 +227,14 @@ export default function AssignmentDetailPage() {
                     </Link>
                   )}
                 </div>
-              ) : (
+              ) : assignment.phase === "writing" ? (
                 <Link
                   href={`/assignment/${id}/submit`}
                   className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
-                  Lever tekst
+                  Skriv tekst
                 </Link>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -239,7 +248,7 @@ export default function AssignmentDetailPage() {
                     {completedReviews.length} fullført, {pendingReviews.length} gjenstår
                   </div>
 
-                  {pendingReviews.length > 0 && (
+                  {pendingReviews.length > 0 && assignment.phase !== "paused" && (
                     <Link
                       href={`/assignment/${id}/review`}
                       className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors mr-3"

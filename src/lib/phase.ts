@@ -1,10 +1,12 @@
-export type Phase = "writing" | "review" | "closed";
+export type Phase = "writing" | "review" | "closed" | "paused";
 
 export function getAssignmentPhase(
   writeDeadline: Date,
   reviewDeadline: Date,
+  isPaused: boolean = false,
   now: Date = new Date()
 ): Phase {
+  if (isPaused) return "paused";
   if (now < writeDeadline) return "writing";
   if (now < reviewDeadline) return "review";
   return "closed";
@@ -26,5 +28,5 @@ export function canReview(phase: Phase): boolean {
 }
 
 export function isReadOnly(phase: Phase): boolean {
-  return phase === "closed";
+  return phase === "closed" || phase === "paused";
 }

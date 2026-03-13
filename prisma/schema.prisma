@@ -59,6 +59,8 @@ model Assignment {
   feedbackDeadline DateTime?
   timerEndAt       DateTime?
   timerLabel       String?
+  isPaused         Boolean   @default(false)
+  isArchived       Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)

@@ -11,7 +11,7 @@ interface Assignment {
   writeDeadline: string;
   reviewDeadline: string;
   groupName: string;
-  phase: "writing" | "review" | "closed";
+  phase: "writing" | "review" | "closed" | "paused";
   hasSubmitted: boolean;
   unreadCount: number;
   pendingReviews: number;
@@ -59,11 +59,12 @@ function TimerBadge({ endAt, label }: { endAt: string; label: string | null }) {
   );
 }
 
-const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket" };
+const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
   closed: "bg-gray-100 text-gray-600",
+  paused: "bg-orange-100 text-orange-800",
 };
 
 export default function DashboardPage() {
@@ -96,18 +97,16 @@ export default function DashboardPage() {
     load();
   }, [router]);
 
-  // Poll for timer updates every 15 seconds (stable dependency)
-  const hasActiveTimer = assignments.some((a) => a.timerEndAt && new Date(a.timerEndAt) > new Date());
+  // Poll every 5 seconds for real-time updates (phase changes, timer, paused state)
   useEffect(() => {
-    if (!hasActiveTimer) return;
     const poll = setInterval(async () => {
       try {
         const res = await fetch("/api/assignments");
         if (res.ok) setAssignments(await res.json());
       } catch { /* ignore */ }
-    }, 15000);
+    }, 5000);
     return () => clearInterval(poll);
-  }, [hasActiveTimer]);
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });

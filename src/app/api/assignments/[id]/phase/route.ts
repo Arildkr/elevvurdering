@@ -21,8 +21,32 @@ export async function POST(
     const body = await request.json();
     const { phase } = body;
 
-    if (!["writing", "review", "closed"].includes(phase)) {
+    if (!["writing", "review", "closed", "paused", "resumed", "archived"].includes(phase)) {
       return NextResponse.json({ error: "Ugyldig fase" }, { status: 400 });
+    }
+
+    if (phase === "paused") {
+      const assignment = await prisma.assignment.update({
+        where: { id },
+        data: { isPaused: true },
+      });
+      return NextResponse.json(assignment);
+    }
+
+    if (phase === "resumed") {
+      const assignment = await prisma.assignment.update({
+        where: { id },
+        data: { isPaused: false },
+      });
+      return NextResponse.json(assignment);
+    }
+
+    if (phase === "archived") {
+      const assignment = await prisma.assignment.update({
+        where: { id },
+        data: { isArchived: true, isPaused: false },
+      });
+      return NextResponse.json(assignment);
     }
 
     const now = new Date();
@@ -32,22 +56,20 @@ export async function POST(
     let reviewDeadline: Date;
 
     if (phase === "writing") {
-      // Set both deadlines to far future
       writeDeadline = farFuture;
       reviewDeadline = new Date(farFuture.getTime() + 24 * 60 * 60 * 1000);
     } else if (phase === "review") {
-      // Set writeDeadline to past, reviewDeadline to far future
       writeDeadline = new Date(now.getTime() - 1000);
       reviewDeadline = farFuture;
     } else {
-      // closed: set both to past
+      // closed
       writeDeadline = new Date(now.getTime() - 2000);
       reviewDeadline = new Date(now.getTime() - 1000);
     }
 
     const assignment = await prisma.assignment.update({
       where: { id },
-      data: { writeDeadline, reviewDeadline },
+      data: { writeDeadline, reviewDeadline, isPaused: false },
     });
 
     return NextResponse.json(assignment);

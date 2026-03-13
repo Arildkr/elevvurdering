@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -16,8 +16,10 @@ interface AssignmentDetail {
   feedbackDeadline: string | null;
   timerEndAt: string | null;
   timerLabel: string | null;
+  isPaused: boolean;
+  isArchived: boolean;
   group: { id: string; name: string };
-  phase: "writing" | "review" | "closed";
+  phase: "writing" | "review" | "closed" | "paused";
   stats: {
     memberCount: number;
     textCount: number;
@@ -43,11 +45,12 @@ interface ReviewData {
   text: { author: { name: string; kandidatnummer: string } };
 }
 
-const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket" };
+const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
   closed: "bg-gray-100 text-gray-600",
+  paused: "bg-orange-100 text-orange-800",
 };
 
 export default function AdminAssignmentDetailPage() {
@@ -66,9 +69,26 @@ export default function AdminAssignmentDetailPage() {
   const [customMinutes, setCustomMinutes] = useState(10);
   const [timerLabel, setTimerLabel] = useState("");
   const [changingPhase, setChangingPhase] = useState(false);
+  const assignmentRef = useRef<AssignmentDetail | null>(null);
+
+  useEffect(() => {
+    assignmentRef.current = assignment;
+  }, [assignment]);
 
   useEffect(() => {
     loadData();
+  }, [id]);
+
+  // Poll every 5 seconds for real-time updates
+  useEffect(() => {
+    if (!id) return;
+    const poll = setInterval(async () => {
+      try {
+        const aRes = await fetch(`/api/assignments/${id}`);
+        if (aRes.ok) setAssignment(await aRes.json());
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(poll);
   }, [id]);
 
   async function loadData() {
@@ -76,11 +96,9 @@ export default function AdminAssignmentDetailPage() {
       const aRes = await fetch(`/api/assignments/${id}`);
       if (aRes.ok) setAssignment(await aRes.json());
 
-      // Load texts for admin view
       const tRes = await fetch(`/api/assignments/${id}/texts`);
       if (tRes.ok) setTexts(await tRes.json());
 
-      // Load reviews for admin view
       const rRes = await fetch(`/api/assignments/${id}/reviews`);
       if (rRes.ok) setReviews(await rRes.json());
     } finally {
@@ -130,7 +148,7 @@ export default function AdminAssignmentDetailPage() {
       return;
     }
     function tick() {
-      const end = new Date(assignment!.timerEndAt!).getTime();
+      const end = new Date(assignmentRef.current!.timerEndAt!).getTime();
       const now = Date.now();
       const diff = end - now;
       if (diff <= 0) {
@@ -154,7 +172,8 @@ export default function AdminAssignmentDetailPage() {
       body: JSON.stringify({ durationMinutes: minutes, label }),
     });
     if (res.ok) {
-      loadData();
+      const data = await res.json();
+      setAssignment((prev) => prev ? { ...prev, timerEndAt: data.timerEndAt, timerLabel: data.timerLabel } : prev);
     } else {
       const data = await res.json();
       alert(data.error || "Noe gikk galt");
@@ -164,7 +183,8 @@ export default function AdminAssignmentDetailPage() {
   async function handleStopTimer() {
     const res = await fetch(`/api/assignments/${id}/timer`, { method: "DELETE" });
     if (res.ok) {
-      loadData();
+      setAssignment((prev) => prev ? { ...prev, timerEndAt: null, timerLabel: null } : prev);
+      setTimerRemaining(null);
     }
   }
 
@@ -195,9 +215,20 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
-  async function handlePhaseChange(phase: "writing" | "review" | "closed") {
-    const labels = { writing: "skrivefase", review: "vurderingsfase", closed: "lukket" };
-    if (!confirm(`Bytte til ${labels[phase]}?`)) return;
+  async function handlePhaseChange(phase: "writing" | "review" | "closed" | "paused" | "resumed" | "archived") {
+    const labels: Record<string, string> = {
+      writing: "skrivefase",
+      review: "vurderingsfase",
+      closed: "lukket",
+      paused: "pauset",
+      resumed: "gjenopptatt",
+      archived: "arkivert",
+    };
+    if (phase === "archived") {
+      if (!confirm("Arkivere oppgaven? Den vil ikke lenger vises for elever.")) return;
+    } else if (!confirm(`Bytte til ${labels[phase]}?`)) {
+      return;
+    }
     setChangingPhase(true);
     try {
       const res = await fetch(`/api/assignments/${id}/phase`, {
@@ -231,9 +262,14 @@ export default function AdminAssignmentDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">{assignment.title}</h1>
           <p className="text-sm text-gray-500 mt-1">{assignment.group.name}</p>
         </div>
-        <span className={`text-sm font-medium px-3 py-1 rounded-full ${phaseColors[assignment.phase]}`}>
-          {phaseLabels[assignment.phase]}
-        </span>
+        <div className="flex items-center gap-2">
+          {assignment.isArchived && (
+            <span className="text-sm font-medium px-3 py-1 rounded-full bg-gray-200 text-gray-600">Arkivert</span>
+          )}
+          <span className={`text-sm font-medium px-3 py-1 rounded-full ${phaseColors[assignment.phase]}`}>
+            {phaseLabels[assignment.phase]}
+          </span>
+        </div>
       </div>
 
       {/* Stats */}
@@ -264,9 +300,9 @@ export default function AdminAssignmentDetailPage() {
             <button
               key={p}
               onClick={() => handlePhaseChange(p)}
-              disabled={changingPhase || assignment.phase === p}
+              disabled={changingPhase || (assignment.phase === p && !assignment.isPaused)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-                assignment.phase === p
+                assignment.phase === p && !assignment.isPaused
                   ? `${phaseColors[p]} ring-2 ring-offset-1 ring-gray-300`
                   : "bg-gray-50 text-gray-600 hover:bg-gray-100"
               }`}
@@ -274,6 +310,33 @@ export default function AdminAssignmentDetailPage() {
               {phaseLabels[p]}
             </button>
           ))}
+          <div className="w-px h-6 bg-gray-200 mx-1" />
+          {assignment.isPaused ? (
+            <button
+              onClick={() => handlePhaseChange("resumed")}
+              disabled={changingPhase}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              Gjenoppta
+            </button>
+          ) : (
+            <button
+              onClick={() => handlePhaseChange("paused")}
+              disabled={changingPhase || assignment.phase === "closed"}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 disabled:opacity-50 transition-colors"
+            >
+              Pause
+            </button>
+          )}
+          {!assignment.isArchived && (
+            <button
+              onClick={() => handlePhaseChange("archived")}
+              disabled={changingPhase}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            >
+              Arkiver
+            </button>
+          )}
         </div>
       </div>
 
@@ -324,8 +387,10 @@ export default function AdminAssignmentDetailPage() {
       {/* Timer */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <h3 className="font-semibold text-gray-900 mb-3">Klasseromstimer</h3>
-        {assignment.timerEndAt && timerRemaining !== null ? (
-          <div className="flex items-center gap-4">
+
+        {/* Current timer display */}
+        {assignment.timerEndAt && timerRemaining !== null && (
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-100">
             <div className="text-center">
               <div className={`text-4xl font-mono font-bold ${timerRemaining === "00:00" ? "text-red-600" : "text-blue-600"}`}>
                 {timerRemaining}
@@ -344,46 +409,50 @@ export default function AdminAssignmentDetailPage() {
               Stopp timer
             </button>
           </div>
-        ) : (
-          <div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {[5, 10, 15, 20, 30].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => handleStartTimer(m)}
-                  className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
-                >
-                  {m} min
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={customMinutes}
-                onChange={(e) => setCustomMinutes(Math.max(1, parseInt(e.target.value) || 1))}
-                min={1}
-                max={180}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-              />
-              <span className="text-sm text-gray-500">min</span>
-              <input
-                type="text"
-                value={timerLabel}
-                onChange={(e) => setTimerLabel(e.target.value)}
-                placeholder={phaseLabels[assignment.phase]}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
-              />
-              <button
-                onClick={() => handleStartTimer(customMinutes)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Start
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 mt-2">Elevene ser nedtellingen i sanntid på sine skjermer.</p>
-          </div>
         )}
+
+        {/* Timer controls always visible */}
+        <div>
+          <p className="text-xs text-gray-500 mb-2">
+            {assignment.timerEndAt ? "Sett ny timer (erstatter gjeldende):" : "Start timer:"}
+          </p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {[5, 10, 15, 20, 30].map((m) => (
+              <button
+                key={m}
+                onClick={() => handleStartTimer(m)}
+                className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={customMinutes}
+              onChange={(e) => setCustomMinutes(Math.max(1, parseInt(e.target.value) || 1))}
+              min={1}
+              max={180}
+              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+            <span className="text-sm text-gray-500">min</span>
+            <input
+              type="text"
+              value={timerLabel}
+              onChange={(e) => setTimerLabel(e.target.value)}
+              placeholder={phaseLabels[assignment.phase]}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900"
+            />
+            <button
+              onClick={() => handleStartTimer(customMinutes)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              Start
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Elevene ser nedtellingen i sanntid på sine skjermer.</p>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -471,7 +540,7 @@ export default function AdminAssignmentDetailPage() {
                     </div>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t._count.reviews} vurderinger</span>
                   </div>
-                  <span className="text-gray-400 text-sm">{expandedText === t.id ? "\u25B2" : "\u25BC"}</span>
+                  <span className="text-gray-400 text-sm">{expandedText === t.id ? "▲" : "▼"}</span>
                 </button>
                 {expandedText === t.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">
@@ -510,7 +579,7 @@ export default function AdminAssignmentDetailPage() {
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Godkjent</span>
                     )}
                   </div>
-                  <span className="text-gray-400 text-sm">{expandedReview === r.id ? "\u25B2" : "\u25BC"}</span>
+                  <span className="text-gray-400 text-sm">{expandedReview === r.id ? "▲" : "▼"}</span>
                 </button>
                 {expandedReview === r.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">

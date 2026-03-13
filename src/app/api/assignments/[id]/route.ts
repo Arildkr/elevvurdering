@@ -41,7 +41,7 @@ export async function GET(
       return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
     }
 
-    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline);
+    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
 
     if (user.isAdmin) {
       // Verify this admin owns this group
@@ -92,6 +92,8 @@ export async function GET(
       feedbackDeadline: assignment.feedbackDeadline,
       timerEndAt: assignment.timerEndAt,
       timerLabel: assignment.timerLabel,
+      isPaused: assignment.isPaused,
+      isArchived: assignment.isArchived,
       groupName: assignment.group.name,
       phase,
     });

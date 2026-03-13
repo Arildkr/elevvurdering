@@ -16,15 +16,17 @@ interface Assignment {
   reviewDeadline: string;
   distributionDone: boolean;
   group: { id: string; name: string };
-  phase: "writing" | "review" | "closed";
+  phase: "writing" | "review" | "closed" | "paused";
+  isArchived: boolean;
   _count: { texts: number; reviewAssignments: number };
 }
 
-const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket" };
+const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
   closed: "bg-gray-100 text-gray-600",
+  paused: "bg-orange-100 text-orange-800",
 };
 
 export default function AdminAssignmentsPage() {
@@ -267,9 +269,14 @@ export default function AdminAssignmentsPage() {
                   <td className="px-6 py-4 font-medium text-gray-900">{a.title}</td>
                   <td className="px-6 py-4 text-gray-600">{a.group.name}</td>
                   <td className="px-6 py-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>
-                      {phaseLabels[a.phase]}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>
+                        {phaseLabels[a.phase]}
+                      </span>
+                      {a.isArchived && (
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-200 text-gray-500">Arkivert</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600">{a._count.texts}</td>
                   <td className="px-6 py-4">
