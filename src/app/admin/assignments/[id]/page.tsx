@@ -377,6 +377,17 @@ export default function AdminAssignmentDetailPage() {
           Eksporter CSV
         </a>
         <button
+          onClick={() => {
+            const csvUrl = `${window.location.origin}/api/assignments/${id}/export?format=csv`;
+            const googleSheetsUrl = `https://docs.google.com/spreadsheets/create?title=${encodeURIComponent(`Elevvurdering - ${assignment.title}`)}`;
+            alert(`1. Åpne Google Sheets (lukk deretter denne meldingen):\n${googleSheetsUrl}\n\n2. Gå til Fil > Åpne\n3. Klikk "Last opp"\n4. Dra eller velg CSV-fil\n\nAlternativt: Kopier CSV-URL og importer i Sheets:\n${csvUrl}`);
+            window.open(googleSheetsUrl, '_blank');
+          }}
+          className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+        >
+          Åpne i Google Sheets
+        </button>
+        <button
           onClick={handleDelete}
           className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors ml-auto"
         >

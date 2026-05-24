@@ -7,12 +7,16 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Use IP + user-agent for rate limiting to allow multiple users on same network
     const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const { allowed, retryAfterMs } = checkRateLimit(`register:${ip}`, 5, 300_000);
+    const userAgent = request.headers.get("user-agent") || "unknown";
+    const key = `register:${ip}:${userAgent.substring(0, 50)}`;
+
+    const { allowed, retryAfterMs } = checkRateLimit(key, 20, 900_000); // 20 attempts per 15 min per browser
 
     if (!allowed) {
       return NextResponse.json(
-        { error: `For mange registreringsforsøk. Prøv igjen om ${Math.ceil(retryAfterMs / 60000)} minutter.` },
+        { error: `For mange registreringsforsøk fra denne enheten. Prøv igjen om ${Math.ceil(retryAfterMs / 60000)} minutter.` },
         { status: 429 }
       );
     }
