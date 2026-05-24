@@ -12,7 +12,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [kandidatnummer, setKandidatnummer] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -102,6 +102,12 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <button
+            onClick={() => router.push("/login")}
+            className="text-sm text-gray-500 hover:text-gray-700 mb-4"
+          >
+            ← Tilbake
+          </button>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Registrer deg
           </h1>

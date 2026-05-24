@@ -3,9 +3,20 @@ import { prisma, type TransactionClient } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { generateUniqueCandidateNumber } from "@/lib/candidate-number";
 import { registerSchema } from "@/lib/validation/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const { allowed, retryAfterMs } = checkRateLimit(`register:${ip}`, 5, 300_000);
+
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `For mange registreringsforsøk. Prøv igjen om ${Math.ceil(retryAfterMs / 60000)} minutter.` },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 
@@ -26,7 +37,22 @@ export async function POST(request: NextRequest) {
     if (!group) {
       return NextResponse.json(
         { error: "Ugyldig gruppekode" },
-        { status: 404 }
+        { status: 400 }
+      );
+    }
+
+    // Check if a user with this email already exists in this group
+    const existingInGroup = await prisma.groupMember.findFirst({
+      where: {
+        groupId: group.id,
+        user: { name: name.toLowerCase() },
+      },
+    });
+
+    if (existingInGroup) {
+      return NextResponse.json(
+        { error: "En bruker med dette navnet eksisterer allerede i denne gruppen" },
+        { status: 400 }
       );
     }
 

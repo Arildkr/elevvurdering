@@ -1,0 +1,2 @@
+-- Baseline migration: marks existing schema as already applied
+-- This file is intentionally empty
