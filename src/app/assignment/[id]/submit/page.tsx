@@ -17,6 +17,8 @@ export default function SubmitTextPage() {
   const [timerEndAt, setTimerEndAt] = useState<string | null>(null);
   const [timerLabel, setTimerLabel] = useState<string | null>(null);
   const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +54,51 @@ export default function SubmitTextPage() {
     }
     load();
   }, [id, router]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (!canEdit || !content || content.trim().length < 50) return;
+
+    const interval = setInterval(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        const method = existingText ? "PUT" : "POST";
+        const res = await fetch(`/api/assignments/${id}/my-text`, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+
+        if (res.ok) {
+          setAutoSaveStatus("saved");
+          setLastSavedTime(new Date());
+          localStorage.setItem(`draft_${id}`, content);
+          setTimeout(() => setAutoSaveStatus("idle"), 2000);
+        }
+      } catch {
+        setAutoSaveStatus("idle");
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [id, content, canEdit, existingText]);
+
+  // Save draft to localStorage on content change
+  useEffect(() => {
+    localStorage.setItem(`draft_${id}`, content);
+  }, [id, content]);
+
+  // Warn when leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (content && lastSavedTime === null && content.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [content, lastSavedTime]);
 
   // Timer countdown
   useEffect(() => {
@@ -191,13 +238,28 @@ export default function SubmitTextPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting || charCount < 50}
-              className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitting ? "Lagrer..." : existingText ? "Lagre endringer" : "Lever tekst"}
-            </button>
+            <div className="flex items-center justify-between">
+              <button
+                type="submit"
+                disabled={submitting || charCount < 50}
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {submitting ? "Lagrer..." : existingText ? "Lagre endringer" : "Lever tekst"}
+              </button>
+              <div className="text-sm">
+                {autoSaveStatus === "saving" && (
+                  <span className="text-gray-500">Lagrer automatisk...</span>
+                )}
+                {autoSaveStatus === "saved" && (
+                  <span className="text-green-600">✓ Lagret</span>
+                )}
+                {lastSavedTime && autoSaveStatus === "idle" && (
+                  <span className="text-gray-400 text-xs">
+                    Sist lagret: {lastSavedTime.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                )}
+              </div>
+            </div>
           </form>
         </div>
       </main>

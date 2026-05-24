@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     if (!group) {
       return NextResponse.json(
-        { error: "Ugyldig gruppekode" },
+        { error: "Gruppekoden er ikke gyldig. Kontroller stavingen og prøv igjen." },
         { status: 400 }
       );
     }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     if (existingInGroup) {
       return NextResponse.json(
-        { error: "En bruker med dette navnet eksisterer allerede i denne gruppen" },
+        { error: "Du har allerede registrert deg. Logg inn med kandidatnummeret ditt." },
         { status: 400 }
       );
     }

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: "Ugyldig kandidatnummer" },
+        { error: "Kandidatnummeret er ikke gyldig. Kontroller stavingen og prøv igjen." },
         { status: 401 }
       );
     }

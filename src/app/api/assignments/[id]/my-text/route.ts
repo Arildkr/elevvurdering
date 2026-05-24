@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validateSession } from "@/lib/auth";
 import { getAssignmentPhase, canSubmitText, canEditText } from "@/lib/phase";
 import { submitTextSchema } from "@/lib/validation/text";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 async function getAssignmentWithAccess(userId: string, assignmentId: string) {
   const assignment = await prisma.assignment.findUnique({
@@ -71,13 +72,14 @@ export async function POST(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    const sanitized = sanitizeHtml(parsed.data.content);
     const text = await prisma.text.upsert({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-      update: { content: parsed.data.content },
+      update: { content: sanitized },
       create: {
         assignmentId: id,
         authorId: user.id,
-        content: parsed.data.content,
+        content: sanitized,
       },
     });
 
@@ -114,9 +116,10 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    const sanitized = sanitizeHtml(parsed.data.content);
     const text = await prisma.text.update({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-      data: { content: parsed.data.content },
+      data: { content: sanitized },
     });
 
     return NextResponse.json(text);
