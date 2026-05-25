@@ -8,6 +8,7 @@ interface Assignment {
   id: string;
   title: string;
   description?: string;
+  taskText?: string | null;
   writeDeadline: string;
   reviewDeadline: string;
   minReviews: number;
@@ -138,8 +139,9 @@ export default function AssignmentDetailPage() {
     <div className="min-h-screen">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <Link href="/dashboard" className="text-sm text-blue-600 hover:text-blue-700">
-            &larr; Tilbake til dashboard
+          <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+            Tilbake til dashboard
           </Link>
         </div>
       </header>
@@ -158,6 +160,13 @@ export default function AssignmentDetailPage() {
 
           {assignment.description && (
             <p className="text-gray-600 mb-4">{assignment.description}</p>
+          )}
+
+          {assignment.taskText && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Oppgave</p>
+              <p className="text-gray-800 text-sm whitespace-pre-wrap">{assignment.taskText}</p>
+            </div>
           )}
 
           <div className="flex gap-6 text-sm text-gray-500">

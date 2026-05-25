@@ -126,17 +126,21 @@ export async function POST(request: NextRequest) {
       ? new Date(parsed.data.reviewDeadline)
       : new Date(farFuture.getTime() + 24 * 60 * 60 * 1000);
 
+    const { toolsConfig, taskText } = body as { toolsConfig?: string; taskText?: string };
+
     const assignment = await prisma.assignment.create({
       data: {
         groupId: parsed.data.groupId,
         title: parsed.data.title,
         description: parsed.data.description,
+        taskText: taskText ?? null,
         writeDeadline,
         reviewDeadline,
         minReviews: parsed.data.minReviews,
         feedbackDeadline: parsed.data.feedbackDeadline
           ? new Date(parsed.data.feedbackDeadline)
           : null,
+        toolsConfig: toolsConfig ?? null,
       },
     });
 

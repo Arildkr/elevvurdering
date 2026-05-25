@@ -36,7 +36,7 @@ export async function GET(
       select: { id: true, content: true, createdAt: true, updatedAt: true },
     });
 
-    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline);
+    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
 
     return NextResponse.json({
       text,
@@ -61,7 +61,7 @@ export async function POST(
     const assignment = await getAssignmentWithAccess(user.id, id);
     if (!assignment) return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
 
-    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline);
+    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
     if (!canSubmitText(phase)) {
       return NextResponse.json({ error: "Skrivefristen har utløpt" }, { status: 403 });
     }
@@ -73,13 +73,15 @@ export async function POST(
     }
 
     const sanitized = sanitizeHtml(parsed.data.content);
+    const windowSwitches = typeof body.windowSwitches === "number" ? body.windowSwitches : undefined;
     const text = await prisma.text.upsert({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-      update: { content: sanitized },
+      update: { content: sanitized, ...(windowSwitches !== undefined && { windowSwitches }) },
       create: {
         assignmentId: id,
         authorId: user.id,
         content: sanitized,
+        ...(windowSwitches !== undefined && { windowSwitches }),
       },
     });
 
@@ -102,7 +104,7 @@ export async function PUT(
     const assignment = await getAssignmentWithAccess(user.id, id);
     if (!assignment) return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
 
-    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline);
+    const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
     if (!canEditText(phase, assignment.distributionDone)) {
       return NextResponse.json(
         { error: "Teksten kan ikke redigeres (frist utløpt eller tildeling er gjort)" },
@@ -117,9 +119,10 @@ export async function PUT(
     }
 
     const sanitized = sanitizeHtml(parsed.data.content);
+    const windowSwitches = typeof body.windowSwitches === "number" ? body.windowSwitches : undefined;
     const text = await prisma.text.update({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-      data: { content: sanitized },
+      data: { content: sanitized, ...(windowSwitches !== undefined && { windowSwitches }) },
     });
 
     return NextResponse.json(text);

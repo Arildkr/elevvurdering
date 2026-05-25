@@ -148,47 +148,82 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-4">
             {assignments.map((a) => (
-              <Link
-                key={a.id}
-                href={`/assignment/${a.id}`}
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:border-blue-300 hover:shadow-sm transition-all block"
-              >
+              <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-semibold text-gray-900">{a.title}</h3>
                     <p className="text-sm text-gray-500">{a.groupName}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {a.timerEndAt && (
-                      <TimerBadge endAt={a.timerEndAt} label={a.timerLabel} />
-                    )}
-                    {a.unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                        {a.unreadCount} ulest{a.unreadCount > 1 ? "e" : ""}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {a.timerEndAt && <TimerBadge endAt={a.timerEndAt} label={a.timerLabel} />}
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>
                       {phaseLabels[a.phase]}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex gap-4 text-sm text-gray-600">
-                  <span>Skrivefrist: {new Date(a.writeDeadline).toLocaleDateString("no-NO")}</span>
-                  <span>Vurderingsfrist: {new Date(a.reviewDeadline).toLocaleDateString("no-NO")}</span>
-                </div>
+                {/* Deadlines */}
+                {(new Date(a.writeDeadline).getFullYear() <= new Date().getFullYear() ||
+                  new Date(a.reviewDeadline).getFullYear() <= new Date().getFullYear()) && (
+                  <div className="flex gap-4 text-xs text-gray-400 mb-4">
+                    {new Date(a.writeDeadline).getFullYear() <= new Date().getFullYear() && (
+                      <span>Skrivefrist: {new Date(a.writeDeadline).toLocaleDateString("no-NO")}</span>
+                    )}
+                    {new Date(a.reviewDeadline).getFullYear() <= new Date().getFullYear() && (
+                      <span>Vurderingsfrist: {new Date(a.reviewDeadline).toLocaleDateString("no-NO")}</span>
+                    )}
+                  </div>
+                )}
 
-                <div className="mt-3 flex gap-3 text-sm">
-                  {a.hasSubmitted ? (
-                    <span className="text-green-700 font-medium">Tekst levert</span>
-                  ) : a.phase === "writing" ? (
-                    <span className="text-amber-700 font-medium">Tekst ikke levert</span>
-                  ) : null}
+                {/* Actions */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {a.phase === "writing" && !a.hasSubmitted && (
+                    <Link
+                      href={`/assignment/${a.id}/submit`}
+                      className="inline-flex items-center gap-1.5 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Skriv teksten din
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                    </Link>
+                  )}
+                  {a.phase === "writing" && a.hasSubmitted && (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 text-sm text-green-700 font-medium">
+                        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3.5 3.5L13 4"/></svg>
+                        Tekst levert
+                      </span>
+                      <Link href={`/assignment/${a.id}/submit`} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+                        Se teksten min
+                      </Link>
+                    </>
+                  )}
                   {a.pendingReviews > 0 && (
-                    <span className="text-blue-700 font-medium">{a.pendingReviews} vurdering(er) gjenstår</span>
+                    <Link
+                      href={`/assignment/${a.id}/review`}
+                      className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors"
+                    >
+                      {a.pendingReviews === 1 ? "Vurder en tekst" : `Vurder tekster (${a.pendingReviews} igjen)`}
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                    </Link>
+                  )}
+                  {a.unreadCount > 0 && (
+                    <Link
+                      href={`/assignment/${a.id}/feedback`}
+                      className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      {a.unreadCount} ny tilbakemelding{a.unreadCount > 1 ? "er" : ""}
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                    </Link>
+                  )}
+                  {a.phase === "paused" && (
+                    <span className="text-sm text-orange-600">Midlertidig pauset av læreren</span>
+                  )}
+                  {a.phase === "closed" && a.unreadCount === 0 && a.pendingReviews === 0 && (
+                    <span className="text-sm text-gray-400">Oppgaven er avsluttet</span>
                   )}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

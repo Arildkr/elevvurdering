@@ -12,11 +12,59 @@ interface User {
 }
 
 const navItems = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/groups", label: "Grupper" },
-  { href: "/admin/assignments", label: "Oppgaver" },
-  { href: "/admin/statistics", label: "Statistikk" },
-  { href: "/admin/teachers", label: "Lærere" },
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/>
+        <rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/>
+        <rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/>
+        <rect x="9" y="9" width="5.5" height="5.5" rx="1"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/groups",
+    label: "Grupper",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="5" r="2.5"/>
+        <path d="M1 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+        <circle cx="12.5" cy="5.5" r="1.8"/>
+        <path d="M15 14c0-2-1.6-3.5-3.5-3.5"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/assignments",
+    label: "Oppgaver",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="1.5" width="12" height="13" rx="1.5"/>
+        <path d="M5 5.5h6M5 8.5h6M5 11.5h3.5"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/statistics",
+    label: "Statistikk",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 14V9M6 14V5.5M10 14V8M14 14V2"/>
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/teachers",
+    label: "Lærere",
+    icon: (
+      <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="5" r="3"/>
+        <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      </svg>
+    ),
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -49,8 +97,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-gray-500">Laster...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#edeae0]">
+        <div className="text-gray-400 text-sm">Laster...</div>
       </div>
     );
   }
@@ -58,13 +106,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-lg font-bold text-gray-900">Elevvurdering</h1>
-          <p className="text-sm text-gray-500">Admin</p>
+      <aside className="w-56 bg-slate-900 flex flex-col flex-shrink-0">
+        {/* Logo / Brand */}
+        <div className="px-4 pt-5 pb-4">
+          <img src="/logo-dark.png" alt="AK-Kreativ" className="h-7 w-auto ml-2" />
+          <p className="text-slate-500 text-[11px] font-medium mt-2 tracking-wide uppercase">
+            Elevvurdering
+          </p>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        <div className="mx-4 h-px bg-slate-800" />
+
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-3 space-y-0.5">
           {navItems.map((item) => {
             const isActive =
               item.href === "/admin"
@@ -74,23 +128,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-amber-500/15 text-amber-400 font-medium"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                 }`}
               >
+                {item.icon}
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">{user?.name}</p>
+        {/* User footer */}
+        <div className="px-4 py-4 border-t border-slate-800">
+          <p className="text-xs text-slate-300 font-medium mb-0.5 truncate">{user?.name}</p>
+          <p className="text-xs text-slate-500 mb-3 truncate">Lærer</p>
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
           >
             Logg ut
           </button>
@@ -98,7 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 bg-gray-50 overflow-auto">{children}</main>
+      <main className="flex-1 bg-[#edeae0] overflow-auto min-h-screen">{children}</main>
     </div>
   );
 }

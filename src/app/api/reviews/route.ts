@@ -47,11 +47,15 @@ export async function POST(request: NextRequest) {
 
     const phase = getAssignmentPhase(
       reviewAssignment.assignment.writeDeadline,
-      reviewAssignment.assignment.reviewDeadline
+      reviewAssignment.assignment.reviewDeadline,
+      reviewAssignment.assignment.isPaused
     );
 
     if (phase === "closed") {
       return NextResponse.json({ error: "Oppgaven er lukket" }, { status: 403 });
+    }
+    if (phase === "paused") {
+      return NextResponse.json({ error: "Oppgaven er midlertidig pauset" }, { status: 403 });
     }
 
     // Create review and mark assignment as completed in a transaction

@@ -104,9 +104,10 @@ export default function RegisterPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <button
             onClick={() => router.push("/login")}
-            className="text-sm text-gray-500 hover:text-gray-700 mb-4"
+            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
           >
-            ← Tilbake
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+            Tilbake
           </button>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Registrer deg
@@ -147,7 +148,7 @@ export default function RegisterPage() {
                 type="text"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="F.eks. DEMO01"
+                placeholder="F.eks. K7MN4P"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400 uppercase tracking-wider font-mono"
                 maxLength={20}
                 required

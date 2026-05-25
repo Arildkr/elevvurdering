@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  DEFAULT_TOOLS_CONFIG,
+  type AssignmentToolsConfig,
+  type PhaseTools,
+} from "@/lib/tools-config";
 
 interface Group {
   id: string;
@@ -47,6 +52,19 @@ export default function AdminAssignmentsPage() {
   const [reviewDeadline, setReviewDeadline] = useState("");
   const [minReviews, setMinReviews] = useState(1);
   const [feedbackDeadline, setFeedbackDeadline] = useState("");
+  const [taskText, setTaskText] = useState("");
+  const [toolsConfig, setToolsConfig] = useState<AssignmentToolsConfig>(DEFAULT_TOOLS_CONFIG);
+
+  function updatePhaseTool<K extends keyof PhaseTools>(
+    phase: keyof AssignmentToolsConfig,
+    key: K,
+    value: PhaseTools[K]
+  ) {
+    setToolsConfig((prev) => ({
+      ...prev,
+      [phase]: { ...prev[phase], [key]: value },
+    }));
+  }
 
   useEffect(() => {
     loadData();
@@ -77,7 +95,9 @@ export default function AdminAssignmentsPage() {
         body: JSON.stringify({
           title,
           description: description || undefined,
+          taskText: taskText || undefined,
           groupId,
+          toolsConfig: JSON.stringify(toolsConfig),
           writeDeadline: writeDeadline ? new Date(writeDeadline).toISOString() : undefined,
           reviewDeadline: reviewDeadline ? new Date(reviewDeadline).toISOString() : undefined,
           minReviews,
@@ -93,6 +113,7 @@ export default function AdminAssignmentsPage() {
 
       setTitle("");
       setDescription("");
+      setTaskText("");
       setGroupId("");
       setWriteDeadline("");
       setReviewDeadline("");
@@ -169,6 +190,17 @@ export default function AdminAssignmentsPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavetekst (valgfritt)</label>
+              <textarea
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                rows={4}
+                placeholder="Skriv oppgaveteksten her. Denne vises for eleven mens de skriver."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+              />
+              <p className="text-xs text-gray-400 mt-1">Vises i en blå boks over tekstfeltet under skriving.</p>
+            </div>
             <p className="text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
               Oppgaven aktiveres med en gang i skrivefase. Du styrer fasene manuelt fra oppgavesiden, eller kan sette frister under avanserte innstillinger.
             </p>
@@ -225,6 +257,97 @@ export default function AdminAssignmentsPage() {
                       max={10}
                       className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                     />
+                  </div>
+
+                  {/* Verktøy per fase */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tilgjengelige verktøy for elevene
+                    </label>
+
+                    {/* Tool progression explanation */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3 text-sm space-y-2">
+                      <p className="text-gray-600 font-medium text-xs uppercase tracking-wide mb-3">Støttenivå – velg etter elevenes behov:</p>
+                      <div className="flex items-start gap-3">
+                        <span className="inline-flex items-center gap-1 shrink-0 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5">Lav støtte</span>
+                        <div>
+                          <span className="font-medium text-gray-800">Stavekontroll</span>
+                          <span className="text-gray-500"> — markerer ord som sannsynligvis er stavet feil, og foreslår riktig stavemåte. Fanger også vanlige forvekslingslyder (gj/j, kj/j, hj/j, hv/v) og dialektformer.</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="inline-flex items-center gap-1 shrink-0 bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5">Middels støtte</span>
+                        <div>
+                          <span className="font-medium text-gray-800">Lesehjelp</span>
+                          <span className="text-gray-500"> — i tillegg: forklarer mønstre som forvekslingslyder og dialektord, og gir tips om setningsoppbygging (lange setninger, gjentagelser, avsnitt).</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <span className="inline-flex items-center gap-1 shrink-0 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5">Høy støtte</span>
+                        <div>
+                          <span className="font-medium text-gray-800">AI-analyse</span>
+                          <span className="text-gray-500"> — leser hele teksten og gir kontekstbasert, intelligent tilbakemelding på innhold, struktur og språk. Mest hjelp, men krever at eleven selv vurderer forslagene kritisk.</span>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 pt-2 border-t border-gray-200 mt-1">
+                        <span className="inline-flex items-center gap-1 shrink-0 bg-gray-100 text-gray-500 text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5">Ingen støtte</span>
+                        <div>
+                          <span className="text-gray-500">Alle verktøy avslått — egnet ved eksamen eller når læreren ønsker at eleven skal arbeide helt selvstendig.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
+                      {/* Header */}
+                      <div className="grid grid-cols-[140px_1fr_1fr_1fr_110px] bg-gray-50 border-b border-gray-200">
+                        <div className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Fase</div>
+                        <div className="px-3 py-3 text-center">
+                          <div className="text-xs font-semibold text-blue-700">Stavekontroll</div>
+                          <div className="text-xs text-gray-400 font-normal mt-0.5">Lav støtte</div>
+                        </div>
+                        <div className="px-3 py-3 text-center">
+                          <div className="text-xs font-semibold text-amber-700">Lesehjelp</div>
+                          <div className="text-xs text-gray-400 font-normal mt-0.5">Middels støtte</div>
+                        </div>
+                        <div className="px-3 py-3 text-center">
+                          <div className="text-xs font-semibold text-purple-700">AI-analyse</div>
+                          <div className="text-xs text-gray-400 font-normal mt-0.5">Høy støtte</div>
+                        </div>
+                        <div className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wide">Målform</div>
+                      </div>
+                      {(["writing", "review", "feedback"] as const).map((phase) => {
+                        const labels = { writing: "Skriving", review: "Vurdering", feedback: "Tilbakemelding" };
+                        const t = toolsConfig[phase];
+                        return (
+                          <div
+                            key={phase}
+                            className="grid grid-cols-[140px_1fr_1fr_1fr_110px] border-b last:border-0 border-gray-100 items-center"
+                          >
+                            <div className="px-3 py-2.5 font-medium text-gray-700">{labels[phase]}</div>
+                            {(["spellCheck", "readingHelp", "aiAnalysis"] as const).map((key) => (
+                              <div key={key} className="flex justify-center py-2.5">
+                                <input
+                                  type="checkbox"
+                                  checked={t[key]}
+                                  onChange={(e) => updatePhaseTool(phase, key, e.target.checked)}
+                                  className="w-4 h-4 rounded accent-blue-600"
+                                />
+                              </div>
+                            ))}
+                            <div className="px-3 py-2">
+                              <select
+                                value={t.targetForm}
+                                onChange={(e) => updatePhaseTool(phase, "targetForm", e.target.value as "nb" | "nn")}
+                                className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-700"
+                              >
+                                <option value="nb">Bokmål</option>
+                                <option value="nn">Nynorsk</option>
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

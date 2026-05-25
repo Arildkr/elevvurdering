@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { updateGroupSchema } from "@/lib/validation/group";
+import { generateUniqueJoinCode } from "@/lib/join-code";
 
 export async function GET(
   _request: NextRequest,
@@ -64,9 +65,15 @@ export async function PUT(
       );
     }
 
+    const { regenerateCode, ...rest } = parsed.data;
+    const updateData: Record<string, unknown> = { ...rest };
+    if (regenerateCode) {
+      updateData.joinCode = await generateUniqueJoinCode();
+    }
+
     const group = await prisma.group.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
     });
 
     return NextResponse.json(group);

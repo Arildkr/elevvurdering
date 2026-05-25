@@ -84,6 +84,7 @@ export async function GET(
       id: assignment.id,
       title: assignment.title,
       description: assignment.description,
+      taskText: assignment.taskText ?? null,
       writeDeadline: assignment.writeDeadline,
       reviewDeadline: assignment.reviewDeadline,
       minReviews: assignment.minReviews,
@@ -96,6 +97,7 @@ export async function GET(
       isArchived: assignment.isArchived,
       groupName: assignment.group.name,
       phase,
+      toolsConfig: assignment.toolsConfig ?? null,
     });
   } catch (error) {
     console.error("Assignment GET error:", error);

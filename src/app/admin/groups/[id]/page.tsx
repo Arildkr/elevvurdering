@@ -24,6 +24,8 @@ export default function AdminGroupDetailPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const [kicking, setKicking] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     loadGroup();
@@ -35,6 +37,30 @@ export default function AdminGroupDetailPage() {
       if (res.ok) setGroup(await res.json());
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function copyCode(code: string) {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleRegenerateCode() {
+    if (!confirm("Er du sikker på at du vil generere en ny kode? Den gamle koden vil slutte å fungere.")) return;
+    setRegenerating(true);
+    try {
+      const res = await fetch(`/api/groups/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerateCode: true }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setGroup((prev) => prev ? { ...prev, joinCode: updated.joinCode } : prev);
+      }
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -62,8 +88,9 @@ export default function AdminGroupDetailPage() {
 
   return (
     <div className="p-8">
-      <Link href="/admin/groups" className="text-sm text-blue-600 hover:text-blue-700 mb-4 block">
-        &larr; Tilbake til grupper
+      <Link href="/admin/groups" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
+        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+        Tilbake til grupper
       </Link>
 
       <div className="flex items-start justify-between mb-6">
@@ -72,10 +99,25 @@ export default function AdminGroupDetailPage() {
           <p className="text-sm text-gray-500 mt-1">{group.members.length} medlemmer</p>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
-          <p className="text-xs text-blue-600 font-medium mb-1">Gruppekode</p>
-          <p className="text-2xl font-mono font-bold text-blue-700 tracking-wider">
+          <p className="text-xs text-blue-600 font-medium mb-2">Gruppekode</p>
+          <p className="text-2xl font-mono font-bold text-blue-700 tracking-wider mb-3">
             {group.joinCode}
           </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => copyCode(group.joinCode)}
+              className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {copied ? "Kopiert!" : "Kopier"}
+            </button>
+            <button
+              onClick={handleRegenerateCode}
+              disabled={regenerating}
+              className="text-xs bg-white border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50"
+            >
+              {regenerating ? "Genererer..." : "Ny kode"}
+            </button>
+          </div>
         </div>
       </div>
 

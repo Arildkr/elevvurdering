@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
+import { parseToolsConfig, type PhaseTools } from "@/lib/tools-config";
 
 interface ReviewAssignmentData {
   id: string;
@@ -11,6 +12,12 @@ interface ReviewAssignmentData {
   textContent: string;
   completed: boolean;
   review: { id: string; content: string } | null;
+}
+
+interface AssignmentMeta {
+  title: string;
+  taskText?: string | null;
+  phase: "writing" | "review" | "closed" | "paused";
 }
 
 export default function ReviewPage() {
@@ -23,11 +30,29 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [reviewTools, setReviewTools] = useState<PhaseTools | null>(null);
+  const [assignmentMeta, setAssignmentMeta] = useState<AssignmentMeta | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/assignments/${id}/my-review-assignment`);
+        const [res, assignRes] = await Promise.all([
+          fetch(`/api/assignments/${id}/my-review-assignment`),
+          fetch(`/api/assignments/${id}`),
+        ]);
+        if (assignRes.ok) {
+          const aData = await assignRes.json();
+          setReviewTools(parseToolsConfig(aData.toolsConfig).review);
+          setAssignmentMeta({
+            title: aData.title,
+            taskText: aData.taskText ?? null,
+            phase: aData.phase,
+          });
+          if (aData.phase === "paused" || aData.phase === "closed") {
+            router.push(`/assignment/${id}`);
+            return;
+          }
+        }
         if (res.ok) {
           const data: ReviewAssignmentData[] = await res.json();
           setAssignments(data);
@@ -46,7 +71,24 @@ export default function ReviewPage() {
       }
     }
     load();
-  }, [id]);
+  }, [id, router]);
+
+  // Poll for phase changes — redirect if teacher pauses or closes
+  useEffect(() => {
+    if (success || loading) return;
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/assignments/${id}`);
+        if (!res.ok) return;
+        const aData = await res.json();
+        setAssignmentMeta((prev) => prev ? { ...prev, phase: aData.phase } : prev);
+        if (aData.phase === "paused" || aData.phase === "closed") {
+          router.push(`/assignment/${id}`);
+        }
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(poll);
+  }, [id, success, loading, router]);
 
   const currentAssignment = assignments[currentIndex];
   const autoSave = useCallback(() => {
@@ -121,8 +163,9 @@ export default function ReviewPage() {
       <div className="min-h-screen">
         <header className="bg-white border-b border-gray-200">
           <div className="max-w-3xl mx-auto px-4 py-4">
-            <Link href={`/assignment/${id}`} className="text-sm text-blue-600 hover:text-blue-700">
-              &larr; Tilbake
+            <Link href={`/assignment/${id}`} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+              Tilbake
             </Link>
           </div>
         </header>
@@ -140,8 +183,9 @@ export default function ReviewPage() {
       <div className="min-h-screen">
         <header className="bg-white border-b border-gray-200">
           <div className="max-w-3xl mx-auto px-4 py-4">
-            <Link href={`/assignment/${id}`} className="text-sm text-blue-600 hover:text-blue-700">
-              &larr; Tilbake
+            <Link href={`/assignment/${id}`} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+              Tilbake
             </Link>
           </div>
         </header>
@@ -152,13 +196,15 @@ export default function ReviewPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Alle vurderinger fullført!</h2>
-            <p className="text-gray-500 mb-4">Du kan nå se tilbakemeldinger på din egen tekst.</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Alle vurderinger levert!</h2>
+            <p className="text-gray-500 mb-6">
+              Bra jobbet. Tilbakemeldinger på din egen tekst blir tilgjengelige når læreren åpner dem.
+            </p>
             <Link
-              href={`/assignment/${id}/feedback`}
-              className="inline-block bg-green-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              href={`/assignment/${id}`}
+              className="inline-block bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              Se tilbakemeldinger
+              Tilbake til oppgaven
             </Link>
           </div>
         </main>
@@ -181,14 +227,28 @@ export default function ReviewPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-4">
+
+        {/* Assignment context */}
+        {assignmentMeta && (
+          <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Oppgave</p>
+            <p className="font-semibold text-gray-900">{assignmentMeta.title}</p>
+            {assignmentMeta.taskText && (
+              <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{assignmentMeta.taskText}</p>
+            )}
+          </div>
+        )}
+
+        {/* Text to review */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Tekst å vurdere</h2>
           <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
             <RichTextViewer content={currentAssignment?.textContent || ""} />
           </div>
         </div>
 
+        {/* Review editor */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Din vurdering</h2>
           <form onSubmit={handleSubmit}>
@@ -198,13 +258,14 @@ export default function ReviewPage() {
                 onChange={setReviewContent}
                 placeholder="Skriv din tilbakemelding her..."
                 minHeight="150px"
+                availableTools={reviewTools ?? undefined}
               />
             </div>
             <div className="flex justify-between items-center mb-4">
               <p className={`text-sm ${charCount < 10 ? "text-amber-600" : "text-gray-500"}`}>
                 {charCount} / minimum 10 tegn
               </p>
-              <p className="text-xs text-gray-400">Lagres automatisk</p>
+              <p className="text-xs text-gray-400">Lagres lokalt automatisk</p>
             </div>
 
             {error && (

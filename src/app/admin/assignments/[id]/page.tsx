@@ -8,6 +8,7 @@ interface AssignmentDetail {
   id: string;
   title: string;
   description?: string;
+  taskText?: string | null;
   writeDeadline: string;
   reviewDeadline: string;
   minReviews: number;
@@ -32,6 +33,7 @@ interface TextData {
   id: string;
   content: string;
   createdAt: string;
+  windowSwitches: number;
   author: { name: string; kandidatnummer: string };
   _count: { reviews: number };
 }
@@ -43,6 +45,13 @@ interface ReviewData {
   rejectedAt: string | null;
   reviewer: { name: string; kandidatnummer: string };
   text: { author: { name: string; kandidatnummer: string } };
+}
+
+interface TeacherFeedbackData {
+  id: string;
+  textId: string;
+  content: string;
+  createdAt: string;
 }
 
 const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket", paused: "Pauset" };
@@ -65,10 +74,17 @@ export default function AdminAssignmentDetailPage() {
   const [tab, setTab] = useState<"overview" | "texts" | "reviews">("overview");
   const [expandedText, setExpandedText] = useState<string | null>(null);
   const [expandedReview, setExpandedReview] = useState<string | null>(null);
+  const [teacherFeedbacks, setTeacherFeedbacks] = useState<TeacherFeedbackData[]>([]);
+  const [addingFeedbackTo, setAddingFeedbackTo] = useState<string | null>(null);
+  const [feedbackDraft, setFeedbackDraft] = useState("");
+  const [savingFeedback, setSavingFeedback] = useState(false);
   const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState(10);
   const [timerLabel, setTimerLabel] = useState("");
   const [changingPhase, setChangingPhase] = useState(false);
+  const [editingTaskText, setEditingTaskText] = useState(false);
+  const [taskTextDraft, setTaskTextDraft] = useState("");
+  const [savingTaskText, setSavingTaskText] = useState(false);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
   useEffect(() => {
@@ -101,6 +117,9 @@ export default function AdminAssignmentDetailPage() {
 
       const rRes = await fetch(`/api/assignments/${id}/reviews`);
       if (rRes.ok) setReviews(await rRes.json());
+
+      const tfRes = await fetch(`/api/assignments/${id}/teacher-feedback`);
+      if (tfRes.ok) setTeacherFeedbacks(await tfRes.json());
     } finally {
       setLoading(false);
     }
@@ -200,6 +219,71 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
+  async function handleDeleteReview(reviewId: string) {
+    if (!confirm("Slette denne tilbakemeldingen permanent? Eleven må skrive en ny.")) return;
+    const res = await fetch(`/api/reviews/${reviewId}`, { method: "DELETE" });
+    if (res.ok) {
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    } else {
+      const data = await res.json();
+      alert(data.error || "Noe gikk galt");
+    }
+  }
+
+  async function handleAddTeacherFeedback(textId: string) {
+    if (!feedbackDraft.trim()) return;
+    setSavingFeedback(true);
+    try {
+      const res = await fetch(`/api/assignments/${id}/teacher-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textId, content: feedbackDraft }),
+      });
+      if (res.ok) {
+        const created: TeacherFeedbackData = await res.json();
+        setTeacherFeedbacks((prev) => [...prev, created]);
+        setFeedbackDraft("");
+        setAddingFeedbackTo(null);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setSavingFeedback(false);
+    }
+  }
+
+  async function handleDeleteTeacherFeedback(feedbackId: string) {
+    if (!confirm("Slette denne lærertilbakemeldingen?")) return;
+    const res = await fetch(`/api/teacher-feedback/${feedbackId}`, { method: "DELETE" });
+    if (res.ok) {
+      setTeacherFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
+    } else {
+      const data = await res.json();
+      alert(data.error || "Noe gikk galt");
+    }
+  }
+
+  async function handleSaveTaskText() {
+    setSavingTaskText(true);
+    try {
+      const res = await fetch(`/api/assignments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskText: taskTextDraft || null }),
+      });
+      if (res.ok) {
+        setAssignment((prev) => prev ? { ...prev, taskText: taskTextDraft || null } : prev);
+        setEditingTaskText(false);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setSavingTaskText(false);
+    }
+  }
+
   async function handleDelete() {
     if (!confirm("Er du sikker på at du vil slette denne oppgaven? Alle tekster og vurderinger slettes permanent.")) return;
     try {
@@ -252,8 +336,9 @@ export default function AdminAssignmentDetailPage() {
 
   return (
     <div className="p-8">
-      <Link href="/admin/assignments" className="text-sm text-blue-600 hover:text-blue-700 mb-4 block">
-        &larr; Tilbake til oppgaver
+      <Link href="/admin/assignments" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4">
+        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+        Tilbake til oppgaver
       </Link>
 
       {/* Header */}
@@ -483,14 +568,62 @@ export default function AdminAssignmentDetailPage() {
 
       {/* Tab content */}
       {tab === "overview" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
           {assignment.description && (
-            <div className="mb-4">
+            <div>
               <h3 className="font-medium text-gray-700 mb-1">Beskrivelse</h3>
               <p className="text-gray-600">{assignment.description}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4 text-sm">
+
+          {/* Oppgavetekst — view/edit */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-medium text-gray-700">Oppgavetekst</h3>
+              {!editingTaskText && (
+                <button
+                  onClick={() => { setTaskTextDraft(assignment.taskText ?? ""); setEditingTaskText(true); }}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {assignment.taskText ? "Rediger" : "Legg til"}
+                </button>
+              )}
+            </div>
+            {editingTaskText ? (
+              <div className="space-y-2">
+                <textarea
+                  value={taskTextDraft}
+                  onChange={(e) => setTaskTextDraft(e.target.value)}
+                  rows={4}
+                  placeholder="Skriv oppgaveteksten her. Vises for eleven under skriving og vurdering."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveTaskText}
+                    disabled={savingTaskText}
+                    className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {savingTaskText ? "Lagrer..." : "Lagre"}
+                  </button>
+                  <button
+                    onClick={() => setEditingTaskText(false)}
+                    className="text-gray-600 px-4 py-1.5 rounded-lg text-sm hover:bg-gray-100 transition-colors"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              </div>
+            ) : assignment.taskText ? (
+              <p className="text-gray-600 text-sm whitespace-pre-wrap bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+                {assignment.taskText}
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm italic">Ingen oppgavetekst satt.</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-100 pt-4">
             <div>
               <span className="font-medium text-gray-700">Skrivefrist: </span>
               <span className="text-gray-600">
@@ -517,9 +650,15 @@ export default function AdminAssignmentDetailPage() {
             </div>
             <div>
               <span className="font-medium text-gray-700">Tilbakemeldinger: </span>
-              <span className={assignment.feedbackOpen ? "text-green-600 font-medium" : "text-gray-600"}>
-                {assignment.feedbackOpen ? "Åpne" : "Lukket"}
-              </span>
+              {(() => {
+                const autoOpen = assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date();
+                const isOpen = assignment.feedbackOpen || autoOpen;
+                return (
+                  <span className={isOpen ? "text-green-600 font-medium" : "text-gray-600"}>
+                    {assignment.feedbackOpen ? "Åpne (manuelt)" : autoOpen ? "Åpne (automatisk)" : "Lukket"}
+                  </span>
+                );
+              })()}
             </div>
             {assignment.feedbackDeadline && (
               <div>
@@ -550,13 +689,76 @@ export default function AdminAssignmentDetailPage() {
                       <span className="font-mono text-xs text-gray-500 ml-2">{t.author.kandidatnummer}</span>
                     </div>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t._count.reviews} vurderinger</span>
+                    {t.windowSwitches > 0 && (
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          t.windowSwitches >= 5
+                            ? "bg-red-100 text-red-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                        title="Antall ganger eleven byttet vindu eller fane under skriving"
+                      >
+                        {t.windowSwitches}× vindubytte
+                      </span>
+                    )}
                   </div>
-                  <span className="text-gray-400 text-sm">{expandedText === t.id ? "▲" : "▼"}</span>
+                  <svg className="w-4 h-4 text-gray-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{expandedText === t.id ? <path d="M4 10l4-4 4 4"/> : <path d="M4 6l4 4 4-4"/>}</svg>
                 </button>
                 {expandedText === t.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">
                     <div className="prose prose-sm max-w-none text-gray-700 mt-4" dangerouslySetInnerHTML={{ __html: t.content }} />
                     <p className="text-xs text-gray-400 mt-3">Levert: {new Date(t.createdAt).toLocaleString("no-NO")}</p>
+
+                    {/* Teacher feedback for this text */}
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Lærertilbakemeldinger</p>
+                      {teacherFeedbacks.filter((f) => f.textId === t.id).map((f) => (
+                        <div key={f.id} className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-2 flex items-start justify-between gap-3">
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap flex-1">{f.content}</p>
+                          <button
+                            onClick={() => handleDeleteTeacherFeedback(f.id)}
+                            className="text-xs text-red-500 hover:text-red-700 font-medium shrink-0"
+                          >
+                            Slett
+                          </button>
+                        </div>
+                      ))}
+
+                      {addingFeedbackTo === t.id ? (
+                        <div className="mt-2 space-y-2">
+                          <textarea
+                            value={feedbackDraft}
+                            onChange={(e) => setFeedbackDraft(e.target.value)}
+                            placeholder="Skriv tilbakemelding til eleven..."
+                            rows={4}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAddTeacherFeedback(t.id)}
+                              disabled={savingFeedback || !feedbackDraft.trim()}
+                              className="text-sm bg-purple-600 text-white px-4 py-1.5 rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium"
+                            >
+                              {savingFeedback ? "Lagrer..." : "Lagre"}
+                            </button>
+                            <button
+                              onClick={() => { setAddingFeedbackTo(null); setFeedbackDraft(""); }}
+                              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5"
+                            >
+                              Avbryt
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setAddingFeedbackTo(t.id); setFeedbackDraft(""); }}
+                          className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+                        >
+                          + Legg til tilbakemelding
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -581,7 +783,7 @@ export default function AdminAssignmentDetailPage() {
                   <div className="flex items-center gap-4 flex-wrap">
                     <div>
                       <span className="font-medium text-gray-900">{r.reviewer.name}</span>
-                      <span className="text-gray-400 mx-1">&rarr;</span>
+                      <svg className="w-3 h-3 text-gray-400 mx-1 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
                       <span className="text-gray-600">{r.text.author.name}</span>
                     </div>
                     {r.rejectedAt ? (
@@ -590,7 +792,7 @@ export default function AdminAssignmentDetailPage() {
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Godkjent</span>
                     )}
                   </div>
-                  <span className="text-gray-400 text-sm">{expandedReview === r.id ? "▲" : "▼"}</span>
+                  <svg className="w-4 h-4 text-gray-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{expandedReview === r.id ? <path d="M4 10l4-4 4 4"/> : <path d="M4 6l4 4 4-4"/>}</svg>
                 </button>
                 {expandedReview === r.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">
@@ -602,11 +804,17 @@ export default function AdminAssignmentDetailPage() {
                       {!r.rejectedAt && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleReject(r.id); }}
-                          className="text-xs text-red-600 hover:text-red-700 font-medium"
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
                           Underkjenn
                         </button>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteReview(r.id); }}
+                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Slett
+                      </button>
                     </div>
                   </div>
                 )}

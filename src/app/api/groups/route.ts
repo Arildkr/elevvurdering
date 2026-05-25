@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { createGroupSchema } from "@/lib/validation/group";
+import { generateUniqueJoinCode } from "@/lib/join-code";
 
 export async function GET() {
   try {
@@ -42,20 +43,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.group.findUnique({
-      where: { joinCode: parsed.data.joinCode },
-    });
-    if (existing) {
-      return NextResponse.json(
-        { error: "Gruppekoden er allerede i bruk" },
-        { status: 409 }
-      );
-    }
+    const joinCode = await generateUniqueJoinCode();
 
     const group = await prisma.group.create({
       data: {
         name: parsed.data.name,
-        joinCode: parsed.data.joinCode,
+        joinCode,
         adminId: admin.id,
       },
     });

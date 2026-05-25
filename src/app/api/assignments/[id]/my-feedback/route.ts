@@ -15,6 +15,12 @@ export async function GET(
     const assignment = await prisma.assignment.findUnique({ where: { id } });
     if (!assignment) return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
 
+    // Verify group membership
+    const member = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId: assignment.groupId, userId: user.id } },
+    });
+    if (!member) return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
+
     // Check if feedback is open (teacher toggle or deadline passed)
     const feedbackAvailable =
       assignment.feedbackOpen ||
@@ -72,10 +78,22 @@ export async function GET(
         createdAt: true,
         readAt: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json({ feedback: reviews });
+    // Get teacher feedback on user's text
+    const teacherFeedbacks = await prisma.teacherFeedback.findMany({
+      where: { textId: text.id },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        readAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return NextResponse.json({ feedback: reviews, teacherFeedback: teacherFeedbacks });
   } catch (error) {
     console.error("My-feedback GET error:", error);
     return NextResponse.json({ error: "Noe gikk galt" }, { status: 500 });

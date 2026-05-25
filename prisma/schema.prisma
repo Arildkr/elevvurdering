@@ -15,12 +15,13 @@ model User {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  sessions         Session[]
-  groupMemberships GroupMember[]
-  createdGroups    Group[]            @relation("GroupAdmin")
-  texts            Text[]
-  reviewAssignments ReviewAssignment[] @relation("Reviewer")
-  reviews          Review[]           @relation("ReviewAuthor")
+  sessions          Session[]
+  groupMemberships  GroupMember[]
+  createdGroups     Group[]             @relation("GroupAdmin")
+  texts             Text[]
+  reviewAssignments ReviewAssignment[]  @relation("Reviewer")
+  reviews           Review[]            @relation("ReviewAuthor")
+  teacherFeedbacks  TeacherFeedback[]   @relation("TeacherFeedbackAdmin")
 }
 
 model Group {
@@ -62,25 +63,30 @@ model Assignment {
   timerLabel       String?
   isPaused         Boolean   @default(false)
   isArchived       Boolean   @default(false)
+  toolsConfig      String?   // JSON: AssignmentToolsConfig
+  taskText         String?   // Oppgavetekst som vises for eleven under skriving
   createdAt        DateTime  @default(now())
 
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
   texts             Text[]
   reviewAssignments ReviewAssignment[]
+  teacherFeedbacks  TeacherFeedback[]
 }
 
 model Text {
-  id           String   @id @default(cuid())
-  assignmentId String
-  authorId     String
-  content      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  assignmentId    String
+  authorId        String
+  content         String
+  windowSwitches  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   assignment        Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   author            User               @relation(fields: [authorId], references: [id])
   reviewAssignments ReviewAssignment[]
   reviews           Review[]
+  teacherFeedbacks  TeacherFeedback[]
 
   @@unique([assignmentId, authorId])
 }
@@ -130,6 +136,23 @@ model Session {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeacherFeedback {
+  id           String    @id @default(cuid())
+  textId       String
+  assignmentId String
+  adminId      String
+  content      String
+  createdAt    DateTime  @default(now())
+  readAt       DateTime?
+
+  text       Text       @relation(fields: [textId], references: [id], onDelete: Cascade)
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  admin      User       @relation("TeacherFeedbackAdmin", fields: [adminId], references: [id])
+
+  @@index([textId])
+  @@index([assignmentId])
 }
 
 model TeacherOtp {

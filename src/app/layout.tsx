@@ -10,6 +10,13 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Elevvurdering",
   description: "Anonym elevvurdering",
+  icons: {
+    icon: [
+      { url: "/favicon-dark.png", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-light.png", media: "(prefers-color-scheme: dark)" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -19,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="no">
-      <body className={`${geistSans.variable} font-sans antialiased bg-gray-50 min-h-screen`}>
+      <body className={`${geistSans.variable} font-sans antialiased bg-[#edeae0] min-h-screen`}>
         {children}
       </body>
     </html>

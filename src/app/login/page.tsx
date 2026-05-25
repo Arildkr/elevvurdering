@@ -47,12 +47,16 @@ export default function LoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md">
+          <div className="flex justify-center mb-6">
+            <img src="/logo-light.png" alt="AK-Kreativ" className="h-7 w-auto" />
+          </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
             <button
               onClick={() => { setStep("choose"); setError(""); }}
-              className="text-sm text-gray-500 hover:text-gray-700 mb-4"
+              className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
             >
-              ← Tilbake
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+              Tilbake
             </button>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Logg inn</h1>
             <p className="text-gray-500 mb-6">
@@ -103,9 +107,12 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md">
+        <div className="flex justify-center mb-6">
+          <img src="/logo-light.png" alt="AK-Kreativ" className="h-8 w-auto" />
+        </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Elevvurdering</h1>
-          <p className="text-gray-500 mb-8">
+          <h1 className="text-xl font-semibold text-gray-900 mb-1">Elevvurdering</h1>
+          <p className="text-gray-500 mb-8 text-sm">
             Velg hvordan du vil logge inn
           </p>
 
