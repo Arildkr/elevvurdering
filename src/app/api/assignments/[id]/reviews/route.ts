@@ -27,6 +27,7 @@ export async function GET(
         reviewer: { select: { name: true, kandidatnummer: true } },
         text: {
           select: {
+            id: true,
             author: { select: { name: true, kandidatnummer: true } },
           },
         },

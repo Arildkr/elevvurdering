@@ -32,4 +32,5 @@ export const updateAssignmentSchema = z.object({
   reviewDeadline: z.string().datetime().optional(),
   minReviews: z.number().int().min(1).max(10).optional(),
   feedbackDeadline: z.string().datetime().nullable().optional(),
+  toolsConfig: z.string().optional(),
 });

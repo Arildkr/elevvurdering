@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { parseToolsConfig } from "@/lib/tools-config";
 
 interface AssignmentDetail {
   id: string;
@@ -19,6 +20,7 @@ interface AssignmentDetail {
   timerLabel: string | null;
   isPaused: boolean;
   isArchived: boolean;
+  toolsConfig: string | null;
   group: { id: string; name: string };
   phase: "writing" | "review" | "closed" | "paused";
   stats: {
@@ -32,6 +34,8 @@ interface AssignmentDetail {
 interface TextData {
   id: string;
   content: string;
+  revisedContent: string | null;
+  revisedAt: string | null;
   createdAt: string;
   windowSwitches: number;
   author: { name: string; kandidatnummer: string };
@@ -44,7 +48,7 @@ interface ReviewData {
   createdAt: string;
   rejectedAt: string | null;
   reviewer: { name: string; kandidatnummer: string };
-  text: { author: { name: string; kandidatnummer: string } };
+  text: { id: string; author: { name: string; kandidatnummer: string } };
 }
 
 interface TeacherFeedbackData {
@@ -54,7 +58,7 @@ interface TeacherFeedbackData {
   createdAt: string;
 }
 
-const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket", paused: "Pauset" };
+const phaseLabels = { writing: "Skrivefase", review: "Responsfase", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
@@ -85,6 +89,9 @@ export default function AdminAssignmentDetailPage() {
   const [editingTaskText, setEditingTaskText] = useState(false);
   const [taskTextDraft, setTaskTextDraft] = useState("");
   const [savingTaskText, setSavingTaskText] = useState(false);
+  const [editingTools, setEditingTools] = useState(false);
+  const [toolsDraft, setToolsDraft] = useState("");
+  const [savingTools, setSavingTools] = useState(false);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
   useEffect(() => {
@@ -281,6 +288,26 @@ export default function AdminAssignmentDetailPage() {
       }
     } finally {
       setSavingTaskText(false);
+    }
+  }
+
+  async function handleSaveTools() {
+    setSavingTools(true);
+    try {
+      const res = await fetch(`/api/assignments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toolsConfig: toolsDraft }),
+      });
+      if (res.ok) {
+        setAssignment((prev) => prev ? { ...prev, toolsConfig: toolsDraft } as typeof prev : prev);
+        setEditingTools(false);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setSavingTools(false);
     }
   }
 
@@ -623,6 +650,96 @@ export default function AdminAssignmentDetailPage() {
             )}
           </div>
 
+          {/* Tools config */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium text-gray-700">Hjelpemidler</h3>
+              {!editingTools && (
+                <button
+                  onClick={() => { setToolsDraft(assignment.toolsConfig ?? ""); setEditingTools(true); }}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Rediger
+                </button>
+              )}
+            </div>
+            {editingTools ? (
+              (() => {
+                const cfg = parseToolsConfig(toolsDraft);
+                const phases = [
+                  { key: "writing", label: "Skriving" },
+                  { key: "review", label: "Respons" },
+                  { key: "feedback", label: "Forbedre" },
+                ] as const;
+                const tools = [
+                  { key: "spellCheck", label: "Stavekontroll" },
+                  { key: "readingHelp", label: "Lesehjelp" },
+                  { key: "aiAnalysis", label: "AI-analyse" },
+                ] as const;
+                return (
+                  <div className="space-y-3">
+                    <table className="text-sm w-full">
+                      <thead>
+                        <tr>
+                          <th className="text-left font-medium text-gray-600 py-1 pr-4">Hjelpemiddel</th>
+                          {phases.map(p => <th key={p.key} className="text-center font-medium text-gray-600 px-3">{p.label}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tools.map(tool => (
+                          <tr key={tool.key}>
+                            <td className="py-1 pr-4 text-gray-700">{tool.label}</td>
+                            {phases.map(phase => (
+                              <td key={phase.key} className="text-center px-3">
+                                <input
+                                  type="checkbox"
+                                  checked={cfg[phase.key][tool.key]}
+                                  onChange={(e) => {
+                                    const updated = { ...cfg, [phase.key]: { ...cfg[phase.key], [tool.key]: e.target.checked } };
+                                    setToolsDraft(JSON.stringify(updated));
+                                  }}
+                                  className="w-4 h-4"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                        <tr>
+                          <td className="py-1 pr-4 text-gray-700">Målform</td>
+                          {phases.map(phase => (
+                            <td key={phase.key} className="text-center px-3">
+                              <select
+                                value={cfg[phase.key].targetForm}
+                                onChange={(e) => {
+                                  const updated = { ...cfg, [phase.key]: { ...cfg[phase.key], targetForm: e.target.value } };
+                                  setToolsDraft(JSON.stringify(updated));
+                                }}
+                                className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                              >
+                                <option value="nb">Bokmål</option>
+                                <option value="nn">Nynorsk</option>
+                              </select>
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div className="flex gap-2">
+                      <button onClick={handleSaveTools} disabled={savingTools} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                        {savingTools ? "Lagrer..." : "Lagre"}
+                      </button>
+                      <button onClick={() => setEditingTools(false)} className="text-gray-600 px-4 py-1.5 rounded-lg text-sm hover:bg-gray-100">
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <p className="text-xs text-gray-400 italic">Klikk Rediger for å endre hjelpemidler per fase.</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-100 pt-4">
             <div>
               <span className="font-medium text-gray-700">Skrivefrist: </span>
@@ -706,10 +823,28 @@ export default function AdminAssignmentDetailPage() {
                 </button>
                 {expandedText === t.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">
-                    <div className="prose prose-sm max-w-none text-gray-700 mt-4" dangerouslySetInnerHTML={{ __html: t.content }} />
-                    <p className="text-xs text-gray-400 mt-3">Levert: {new Date(t.createdAt).toLocaleString("no-NO")}</p>
+                    {/* 1. utkast */}
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mt-4 mb-2">1. utkast</p>
+                    <div className="prose prose-sm max-w-none text-gray-700 bg-blue-50 rounded-lg p-4" dangerouslySetInnerHTML={{ __html: t.content }} />
+                    <p className="text-xs text-gray-400 mt-1">Levert: {new Date(t.createdAt).toLocaleString("no-NO")}</p>
 
-                    {/* Teacher feedback for this text */}
+                    {/* Tilbakemeldinger fra medelever */}
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tilbakemeldinger fra medelever ({reviews.filter(r => r.text.id === t.id && !r.rejectedAt).length})</p>
+                      {reviews.filter(r => r.text.id === t.id).length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">Ingen tilbakemeldinger ennå.</p>
+                      ) : reviews.filter(r => r.text.id === t.id).map((r, i) => (
+                        <div key={r.id} className={`rounded-lg border p-3 mb-2 text-sm ${r.rejectedAt ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-700">Tilbakemelding {i + 1}</span>
+                            {r.rejectedAt && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Underkjent</span>}
+                          </div>
+                          <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: r.content }} />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Lærertilbakemeldinger */}
                     <div className="mt-4 border-t border-gray-100 pt-4">
                       <p className="text-xs font-medium text-gray-500 mb-2">Lærertilbakemeldinger</p>
                       {teacherFeedbacks.filter((f) => f.textId === t.id).map((f) => (
@@ -757,6 +892,19 @@ export default function AdminAssignmentDetailPage() {
                         >
                           + Legg til tilbakemelding
                         </button>
+                      )}
+                    </div>
+
+                    {/* 2. utkast */}
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">2. utkast (forbedret)</p>
+                      {t.revisedContent ? (
+                        <>
+                          <div className="prose prose-sm max-w-none text-gray-700 bg-green-50 rounded-lg p-4" dangerouslySetInnerHTML={{ __html: t.revisedContent }} />
+                          {t.revisedAt && <p className="text-xs text-gray-400 mt-1">Levert: {new Date(t.revisedAt).toLocaleString("no-NO")}</p>}
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">Ikke levert ennå.</p>
                       )}
                     </div>
                   </div>

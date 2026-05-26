@@ -34,6 +34,10 @@ export async function GET(
           },
           orderBy: { createdAt: "asc" },
         },
+        teacherFeedbacks: {
+          select: { content: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -60,6 +64,8 @@ export async function GET(
 interface TextWithReviews {
   id: string;
   content: string;
+  revisedContent: string | null;
+  revisedAt: Date | null;
   createdAt: Date;
   author: { name: string; kandidatnummer: string };
   reviews: {
@@ -69,6 +75,7 @@ interface TextWithReviews {
     rejectedAt: Date | null;
     reviewer: { name: string; kandidatnummer: string };
   }[];
+  teacherFeedbacks: { content: string; createdAt: Date }[];
 }
 
 interface AssignmentData {
@@ -100,9 +107,13 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
   .text-content h3 { font-size: 16px; margin: 0 0 8px; }
   .text-content p { margin: 0 0 8px; }
   .text-content mark { background: #fef08a; padding: 0 2px; }
-  .reviews-header { font-size: 16px; font-weight: 600; color: #374151; margin: 24px 0 12px; }
+  .section-header { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 10px; padding: 6px 12px; border-radius: 4px; }
+  .section-header.draft1 { background: #eff6ff; color: #1d4ed8; }
+  .section-header.feedback { background: #f9fafb; color: #374151; }
+  .section-header.draft2 { background: #f0fdf4; color: #15803d; }
   .review { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
   .review.rejected { border-color: #fca5a5; background: #fef2f2; }
+  .review.teacher { border-color: #e9d5ff; background: #faf5ff; }
   .reviewer-name { font-weight: 600; font-size: 14px; }
   .review-meta { color: #9ca3af; font-size: 12px; }
   .review-content { margin-top: 8px; }
@@ -110,6 +121,7 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
   .review-content p { margin: 0 0 4px; }
   .rejected-badge { background: #fee2e2; color: #dc2626; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
   .no-reviews { color: #9ca3af; font-style: italic; }
+  .revised-content { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 8px 0; }
   @media print { body { padding: 0; } .text-section { page-break-inside: avoid; } }
 </style>
 </head>
@@ -123,22 +135,42 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
     html += `<div class="text-section">
 <div class="author">${escapeHtml(text.author.name)}</div>
 <div class="kandidatnr">${escapeHtml(text.author.kandidatnummer)} &middot; Levert ${text.createdAt.toLocaleDateString("no-NO")}</div>
+
+<div class="section-header draft1">1. utkast</div>
 <div class="text-content">${text.content}</div>
+
+<div class="section-header feedback">Tilbakemeldinger fra medelever (${activeReviews.length})</div>
 `;
 
-    if (text.reviews.length > 0) {
-      html += `<div class="reviews-header">Tilbakemeldinger (${activeReviews.length})</div>\n`;
+    if (text.teacherFeedbacks.length > 0) {
+      for (const tf of text.teacherFeedbacks) {
+        html += `<div class="review teacher">
+<div class="reviewer-name">Lærer</div>
+<div class="review-meta">${tf.createdAt.toLocaleDateString("no-NO")}</div>
+<div class="review-content"><p>${escapeHtml(tf.content)}</p></div>
+</div>\n`;
+      }
+    }
+
+    if (activeReviews.length > 0) {
       for (const review of text.reviews) {
         const cls = review.rejectedAt ? "review rejected" : "review";
         html += `<div class="${cls}">
-<div class="reviewer-name">${escapeHtml(review.reviewer.name)} <span class="kandidatnr">${escapeHtml(review.reviewer.kandidatnummer)}</span>
-${review.rejectedAt ? ' <span class="rejected-badge">Underkjent</span>' : ""}</div>
+<div class="reviewer-name">Anonym medelev${review.rejectedAt ? ' <span class="rejected-badge">Underkjent</span>' : ""}</div>
 <div class="review-meta">${review.createdAt.toLocaleDateString("no-NO")}</div>
 <div class="review-content">${review.content}</div>
 </div>\n`;
       }
     } else {
-      html += `<p class="no-reviews">Ingen tilbakemeldinger ennå.</p>\n`;
+      html += `<p class="no-reviews">Ingen tilbakemeldinger.</p>\n`;
+    }
+
+    html += `<div class="section-header draft2">2. utkast (forbedret)</div>\n`;
+    if (text.revisedContent) {
+      html += `<div class="revised-content">${text.revisedContent}</div>
+<div class="review-meta" style="margin-top:4px">Levert ${text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : ""}</div>\n`;
+    } else {
+      html += `<p class="no-reviews">Ikke levert forbedret utkast.</p>\n`;
     }
 
     html += `</div>\n`;
@@ -159,25 +191,31 @@ ${review.rejectedAt ? ' <span class="rejected-badge">Underkjent</span>' : ""}</d
 function buildCsvExport(assignment: AssignmentData, texts: TextWithReviews[]) {
   const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ");
   const rows: string[] = [];
-  rows.push("Forfatter,Kandidatnr,Tekst,Reviewer,Reviewer Kandidatnr,Tilbakemelding,Status,Dato");
+  rows.push("Forfatter,Kandidatnr,1. utkast,Tilbakemelding (anonym),Status,2. utkast (forbedret),2. utkast dato");
 
   for (const text of texts) {
     if (text.reviews.length === 0) {
-      rows.push(csvRow([text.author.name, text.author.kandidatnummer, stripHtml(text.content), "", "", "", "", ""]));
+      rows.push(csvRow([
+        text.author.name,
+        text.author.kandidatnummer,
+        stripHtml(text.content),
+        "",
+        "",
+        stripHtml(text.revisedContent ?? ""),
+        text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+      ]));
     } else {
-      for (const review of text.reviews) {
-        rows.push(
-          csvRow([
-            text.author.name,
-            text.author.kandidatnummer,
-            stripHtml(text.content),
-            review.reviewer.name,
-            review.reviewer.kandidatnummer,
-            stripHtml(review.content),
-            review.rejectedAt ? "Underkjent" : "Godkjent",
-            review.createdAt.toISOString(),
-          ])
-        );
+      for (let i = 0; i < text.reviews.length; i++) {
+        const review = text.reviews[i];
+        rows.push(csvRow([
+          text.author.name,
+          text.author.kandidatnummer,
+          i === 0 ? stripHtml(text.content) : "",
+          stripHtml(review.content),
+          review.rejectedAt ? "Underkjent" : "Godkjent",
+          i === 0 ? stripHtml(text.revisedContent ?? "") : "",
+          i === 0 && text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+        ]));
       }
     }
   }
