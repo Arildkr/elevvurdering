@@ -707,7 +707,13 @@ export default function AdminAssignmentDetailPage() {
                       return (
                         <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                           <td className="py-2 pr-4">
-                            <span className="font-medium text-gray-900">{t.author.name}</span>
+                            <button
+                              onClick={() => { setTab("texts"); setExpandedText(t.id); }}
+                              className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors text-left"
+                              title="Gå til elevens tekst"
+                            >
+                              {t.author.name}
+                            </button>
                             <span className="font-mono text-xs text-gray-400 ml-2">{t.author.kandidatnummer}</span>
                           </td>
                           <td className="text-center px-3">
