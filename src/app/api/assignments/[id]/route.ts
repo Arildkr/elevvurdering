@@ -76,9 +76,21 @@ export async function GET(
     }
 
     // Check if feedback is available for the student
-    const feedbackAvailable =
+    let feedbackAvailable =
       assignment.feedbackOpen ||
       (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
+
+    // Bypass: if teacher has given feedback to this student, Forbedre is accessible
+    if (!feedbackAvailable) {
+      const text = await prisma.text.findUnique({
+        where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
+        select: { id: true },
+      });
+      if (text) {
+        const teacherFeedbackCount = await prisma.teacherFeedback.count({ where: { textId: text.id } });
+        if (teacherFeedbackCount > 0) feedbackAvailable = true;
+      }
+    }
 
     return NextResponse.json({
       id: assignment.id,

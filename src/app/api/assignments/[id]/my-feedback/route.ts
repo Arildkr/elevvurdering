@@ -46,14 +46,25 @@ export async function GET(
     });
 
     if (completedReviews < assignment.minReviews) {
-      return NextResponse.json(
-        {
-          error: `Du må fullføre minst ${assignment.minReviews} vurdering(er) før du kan se tilbakemeldinger`,
-          required: assignment.minReviews,
-          completed: completedReviews,
-        },
-        { status: 403 }
-      );
+      // Allow access if teacher has already given feedback to this student
+      const text = await prisma.text.findUnique({
+        where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
+        select: { id: true },
+      });
+      const teacherFeedbackCount = text
+        ? await prisma.teacherFeedback.count({ where: { textId: text.id } })
+        : 0;
+
+      if (teacherFeedbackCount === 0) {
+        return NextResponse.json(
+          {
+            error: `Du må fullføre minst ${assignment.minReviews} vurdering(er) før du kan se tilbakemeldinger`,
+            required: assignment.minReviews,
+            completed: completedReviews,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Get user's text

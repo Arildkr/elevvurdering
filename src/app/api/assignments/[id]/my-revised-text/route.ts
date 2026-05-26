@@ -16,8 +16,19 @@ async function getOpenAssignment(userId: string, assignmentId: string) {
     assignment.feedbackOpen ||
     (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
 
-  if (!feedbackAvailable) return null;
-  return assignment;
+  if (feedbackAvailable) return assignment;
+
+  // Bypass: if teacher has given feedback to this student, allow access
+  const text = await prisma.text.findUnique({
+    where: { assignmentId_authorId: { assignmentId: assignmentId, authorId: userId } },
+    select: { id: true },
+  });
+  if (text) {
+    const teacherFeedbackCount = await prisma.teacherFeedback.count({ where: { textId: text.id } });
+    if (teacherFeedbackCount > 0) return assignment;
+  }
+
+  return null;
 }
 
 export async function GET(
