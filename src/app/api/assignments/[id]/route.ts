@@ -32,7 +32,7 @@ export async function GET(
     const assignment = await prisma.assignment.findUnique({
       where: { id },
       include: {
-        group: { select: { id: true, name: true, adminId: true } },
+        group: { select: { id: true, name: true, adminId: true, joinCode: true } },
         _count: { select: { texts: true, reviewAssignments: true } },
       },
     });

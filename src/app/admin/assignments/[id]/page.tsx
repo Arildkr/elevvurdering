@@ -21,7 +21,7 @@ interface AssignmentDetail {
   isPaused: boolean;
   isArchived: boolean;
   toolsConfig: string | null;
-  group: { id: string; name: string };
+  group: { id: string; name: string; joinCode: string };
   phase: "writing" | "review" | "closed" | "paused";
   stats: {
     memberCount: number;
@@ -402,7 +402,17 @@ export default function AdminAssignmentDetailPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{assignment.title}</h1>
-          <p className="text-sm text-gray-500 mt-1">{assignment.group.name}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-gray-500">{assignment.group.name}</p>
+            <button
+              onClick={() => navigator.clipboard.writeText(assignment.group.joinCode)}
+              title="Kopier kode — del denne med elevene så de kan bli med i gruppen"
+              className="inline-flex items-center gap-1.5 text-xs font-mono bg-gray-100 hover:bg-blue-50 hover:text-blue-700 text-gray-600 px-2 py-1 rounded-lg transition-colors"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="9" height="11" rx="1"/><path d="M2 5h0a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1v0"/></svg>
+              {assignment.group.joinCode}
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {assignment.isArchived && (
