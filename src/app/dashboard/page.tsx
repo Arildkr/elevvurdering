@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-900">{a.title}</h3>
+                    <Link href={`/assignment/${a.id}`} className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">{a.title}</Link>
                     <p className="text-sm text-gray-500">{a.groupName}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -209,12 +209,15 @@ export default function DashboardPage() {
                   )}
                   {a.unreadCount > 0 && (
                     <Link
-                      href={`/assignment/${a.id}/feedback`}
-                      className="inline-flex items-center gap-1.5 bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                      href={`/assignment/${a.id}/forbedre`}
+                      className="inline-flex items-center gap-1.5 bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                     >
-                      {a.unreadCount} ny tilbakemelding{a.unreadCount > 1 ? "er" : ""}
+                      {a.unreadCount} ny tilbakemelding{a.unreadCount > 1 ? "er" : ""} — forbedre teksten
                       <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
                     </Link>
+                  )}
+                  {a.phase === "review" && a.pendingReviews === 0 && a.unreadCount === 0 && (
+                    <span className="text-sm text-gray-500">Venter på at andre elever skal levere respons</span>
                   )}
                   {a.phase === "paused" && (
                     <span className="text-sm text-orange-600">Midlertidig pauset av læreren</span>
