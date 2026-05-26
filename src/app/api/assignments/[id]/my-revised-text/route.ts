@@ -12,21 +12,18 @@ async function getOpenAssignment(userId: string, assignmentId: string) {
   });
   if (!member) return null;
 
-  const feedbackAvailable =
+  const globalUnlock =
     assignment.feedbackOpen ||
     (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
 
-  if (feedbackAvailable) return assignment;
+  if (globalUnlock) return assignment;
 
-  // Bypass: if teacher has given feedback to this student, allow access
+  // Check per-student unlock
   const text = await prisma.text.findUnique({
-    where: { assignmentId_authorId: { assignmentId: assignmentId, authorId: userId } },
-    select: { id: true },
+    where: { assignmentId_authorId: { assignmentId, authorId: userId } },
+    select: { feedbackUnlocked: true },
   });
-  if (text) {
-    const teacherFeedbackCount = await prisma.teacherFeedback.count({ where: { textId: text.id } });
-    if (teacherFeedbackCount > 0) return assignment;
-  }
+  if (text?.feedbackUnlocked) return assignment;
 
   return null;
 }

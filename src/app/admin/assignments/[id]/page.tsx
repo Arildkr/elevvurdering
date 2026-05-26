@@ -38,6 +38,8 @@ interface TextData {
   revisedAt: string | null;
   createdAt: string;
   windowSwitches: number;
+  feedbackUnlocked: boolean;
+  reviewsGiven: number;
   author: { name: string; kandidatnummer: string };
   _count: { reviews: number };
 }
@@ -92,6 +94,7 @@ export default function AdminAssignmentDetailPage() {
   const [editingTools, setEditingTools] = useState(false);
   const [toolsDraft, setToolsDraft] = useState("");
   const [savingTools, setSavingTools] = useState(false);
+  const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
   useEffect(() => {
@@ -358,6 +361,27 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
+  async function handleUnlockFeedback(textId: string, unlock: boolean) {
+    setUnlockingFeedback(textId);
+    try {
+      const res = await fetch(`/api/assignments/${id}/unlock-feedback`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textId, unlock }),
+      });
+      if (res.ok) {
+        setTexts((prev) =>
+          prev.map((t) => (t.id === textId ? { ...t, feedbackUnlocked: unlock } : t))
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setUnlockingFeedback(null);
+    }
+  }
+
   if (loading) return <div className="p-8 text-gray-500">Laster...</div>;
   if (!assignment) return <div className="p-8 text-gray-500">Oppgave ikke funnet</div>;
 
@@ -596,8 +620,87 @@ export default function AdminAssignmentDetailPage() {
       {/* Tab content */}
       {tab === "overview" && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+
+          {/* Student status table */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium text-gray-700">Elevstatus — respons og Forbedre</h3>
+              {texts.length < assignment.stats.memberCount && (
+                <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+                  {assignment.stats.memberCount - texts.length} elev{assignment.stats.memberCount - texts.length !== 1 ? "er" : ""} har ikke levert tekst
+                </span>
+              )}
+            </div>
+            {texts.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">Ingen tekster levert ennå.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left font-medium text-gray-600 py-2 pr-4">Elev</th>
+                      <th className="text-center font-medium text-gray-600 px-3">Respons gitt</th>
+                      <th className="text-center font-medium text-gray-600 px-3">Forbedre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {texts.map((t) => {
+                      const reviewsDone = t.reviewsGiven;
+                      const reviewsNeeded = assignment.minReviews;
+                      const globalOpen = assignment.feedbackOpen ||
+                        (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
+                      return (
+                        <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="py-2 pr-4">
+                            <span className="font-medium text-gray-900">{t.author.name}</span>
+                            <span className="font-mono text-xs text-gray-400 ml-2">{t.author.kandidatnummer}</span>
+                          </td>
+                          <td className="text-center px-3">
+                            <span className={`font-medium ${
+                              reviewsDone >= reviewsNeeded
+                                ? "text-green-700"
+                                : reviewsDone > 0
+                                ? "text-amber-600"
+                                : "text-red-600"
+                            }`}>
+                              {reviewsDone} / {reviewsNeeded}
+                            </span>
+                          </td>
+                          <td className="text-center px-3">
+                            {globalOpen ? (
+                              <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Åpen for alle</span>
+                            ) : t.feedbackUnlocked ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">Åpen individuelt</span>
+                                <button
+                                  onClick={() => handleUnlockFeedback(t.id, false)}
+                                  disabled={unlockingFeedback === t.id}
+                                  className="text-xs text-gray-400 hover:text-red-600 transition-colors"
+                                >
+                                  Lukk
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleUnlockFeedback(t.id, true)}
+                                disabled={unlockingFeedback === t.id}
+                                className="text-xs bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {unlockingFeedback === t.id ? "..." : "Åpne Forbedre"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
           {assignment.description && (
-            <div>
+            <div className="border-t border-gray-100 pt-4">
               <h3 className="font-medium text-gray-700 mb-1">Beskrivelse</h3>
               <p className="text-gray-600">{assignment.description}</p>
             </div>

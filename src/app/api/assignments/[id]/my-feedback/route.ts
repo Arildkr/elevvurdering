@@ -15,53 +15,27 @@ export async function GET(
     const assignment = await prisma.assignment.findUnique({ where: { id } });
     if (!assignment) return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
 
-    // Verify group membership
     const member = await prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId: assignment.groupId, userId: user.id } },
     });
     if (!member) return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
 
-    // Check if feedback is open (teacher toggle or deadline passed)
-    const feedbackAvailable =
+    // Access hierarchy:
+    // 1. feedbackOpen OR deadline passed → everyone bypasses minReviews
+    // 2. text.feedbackUnlocked → this student bypasses everything
+    // 3. Otherwise → blocked (teacher hasn't opened yet)
+    const globalUnlock =
       assignment.feedbackOpen ||
       (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
 
-    if (!feedbackAvailable) {
-      return NextResponse.json(
-        { error: "Tilbakemeldinger er ikke åpnet ennå", feedbackClosed: true },
-        { status: 403 }
-      );
-    }
-
-    // Check user has completed enough non-rejected reviews
-    const completedReviews = await prisma.review.count({
-      where: {
-        reviewAssignment: {
-          assignmentId: id,
-          reviewerId: user.id,
-          isActive: true,
-        },
-        rejectedAt: null,
-      },
-    });
-
-    if (completedReviews < assignment.minReviews) {
-      // Allow access if teacher has already given feedback to this student
-      const text = await prisma.text.findUnique({
+    if (!globalUnlock) {
+      const textCheck = await prisma.text.findUnique({
         where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-        select: { id: true },
+        select: { feedbackUnlocked: true },
       });
-      const teacherFeedbackCount = text
-        ? await prisma.teacherFeedback.count({ where: { textId: text.id } })
-        : 0;
-
-      if (teacherFeedbackCount === 0) {
+      if (!textCheck?.feedbackUnlocked) {
         return NextResponse.json(
-          {
-            error: `Du må fullføre minst ${assignment.minReviews} vurdering(er) før du kan se tilbakemeldinger`,
-            required: assignment.minReviews,
-            completed: completedReviews,
-          },
+          { error: "Tilbakemeldinger er ikke åpnet ennå", feedbackClosed: true },
           { status: 403 }
         );
       }

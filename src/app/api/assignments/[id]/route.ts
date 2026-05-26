@@ -80,16 +80,13 @@ export async function GET(
       assignment.feedbackOpen ||
       (assignment.feedbackDeadline && new Date(assignment.feedbackDeadline) <= new Date());
 
-    // Bypass: if teacher has given feedback to this student, Forbedre is accessible
+    // Check per-student unlock
     if (!feedbackAvailable) {
       const text = await prisma.text.findUnique({
         where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-        select: { id: true },
+        select: { feedbackUnlocked: true },
       });
-      if (text) {
-        const teacherFeedbackCount = await prisma.teacherFeedback.count({ where: { textId: text.id } });
-        if (teacherFeedbackCount > 0) feedbackAvailable = true;
-      }
+      if (text?.feedbackUnlocked) feedbackAvailable = true;
     }
 
     return NextResponse.json({

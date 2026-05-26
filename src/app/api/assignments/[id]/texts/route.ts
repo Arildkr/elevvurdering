@@ -18,17 +18,35 @@ export async function GET(
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
-    // include returns all scalar fields (content, revisedContent, revisedAt, etc.) plus relations
-    const texts = await prisma.text.findMany({
-      where: { assignmentId: id },
-      include: {
-        author: { select: { name: true, kandidatnummer: true, isActive: true } },
-        _count: { select: { reviews: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const [texts, reviewAssignments] = await Promise.all([
+      prisma.text.findMany({
+        where: { assignmentId: id },
+        include: {
+          author: { select: { name: true, kandidatnummer: true, isActive: true } },
+          _count: { select: { reviews: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.reviewAssignment.findMany({
+        where: { assignmentId: id, isActive: true },
+        select: { reviewerId: true, review: { select: { rejectedAt: true } } },
+      }),
+    ]);
 
-    return NextResponse.json(texts);
+    // Count completed non-rejected reviews per reviewer
+    const reviewsGivenMap = new Map<string, number>();
+    for (const ra of reviewAssignments) {
+      if (ra.review && !ra.review.rejectedAt) {
+        reviewsGivenMap.set(ra.reviewerId, (reviewsGivenMap.get(ra.reviewerId) ?? 0) + 1);
+      }
+    }
+
+    const result = texts.map((t) => ({
+      ...t,
+      reviewsGiven: reviewsGivenMap.get(t.authorId) ?? 0,
+    }));
+
+    return NextResponse.json(result);
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
