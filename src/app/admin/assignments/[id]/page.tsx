@@ -428,30 +428,34 @@ export default function AdminAssignmentDetailPage() {
           <svg className={`w-4 h-4 text-blue-600 transition-transform ${showGuide ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4"/></svg>
         </button>
         {showGuide && (
-          <div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-blue-900">
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-              <p><strong>Skrivefase</strong> — Elevene skriver og leverer teksten sin. Du kan legge til oppgavetekst og velge hvilke hjelpemidler som er tilgjengelige.</p>
+          <div className="px-5 pb-4 flex flex-col sm:flex-row gap-x-8 gap-y-2 text-sm text-blue-900">
+            <div className="flex-1 space-y-2">
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                <p><strong>Skrivefase</strong> — Elevene skriver og leverer teksten sin. Du kan legge til oppgavetekst og velge hvilke hjelpemidler som er tilgjengelige.</p>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                <p><strong>Tildel tekster</strong> — Klikk «Tildel tekster» når skrivefristen er ute. Hver elev får tildelt tekster å vurdere. Bytt deretter til Responsfase.</p>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                <p><strong>Responsfase</strong> — Elevene gir tilbakemeldinger på hverandres tekster. Følg med i Elevstatus-tabellen under Oversikt.</p>
+              </div>
             </div>
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
-              <p><strong>Tildel tekster</strong> — Klikk &laquo;Tildel tekster&raquo; når skrivefristen er ute. Hver elev får tildelt tekster å vurdere. Bytt deretter til Responsfase.</p>
-            </div>
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>
-              <p><strong>Responsfase</strong> — Elevene gir tilbakemeldinger på hverandres tekster. Følg med i Elevstatus-tabellen under Oversikt.</p>
-            </div>
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">4</span>
-              <p><strong>Åpne tilbakemeldinger</strong> — Når responsen er ferdig, klikk &laquo;Åpne tilbakemeldinger&raquo;. Alle elever får da tilgang til å lese tilbakemeldingene og forbedre teksten sin.</p>
-            </div>
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">5</span>
-              <p><strong>Individuelle unntak</strong> — Har én elev ingen medelever å vurdere? Bruk &laquo;Åpne Forbedre&raquo; i Elevstatus-tabellen for å åpne kun for den eleven.</p>
-            </div>
-            <div className="flex gap-3 items-start">
-              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">6</span>
-              <p><strong>Eksporter</strong> — Last ned rapport som HTML eller CSV når oppgaven er avsluttet. Rapporten inneholder 1. utkast, tilbakemeldinger og 2. utkast.</p>
+            <div className="flex-1 space-y-2">
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+                <p><strong>Åpne tilbakemeldinger</strong> — Når responsen er ferdig, klikk «Åpne tilbakemeldinger». Alle elever får tilgang til å lese tilbakemeldingene og forbedre teksten sin.</p>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">5</span>
+                <p><strong>Individuelle unntak</strong> — Har én elev ingen medelever å vurdere? Bruk «Åpne Forbedre» i Elevstatus-tabellen for å åpne kun for den eleven.</p>
+              </div>
+              <div className="flex gap-3 items-start">
+                <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">6</span>
+                <p><strong>Eksporter</strong> — Last ned rapport som HTML eller CSV når oppgaven er avsluttet. Rapporten inneholder 1. utkast, tilbakemeldinger og 2. utkast.</p>
+              </div>
             </div>
           </div>
         )}
