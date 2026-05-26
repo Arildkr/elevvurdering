@@ -774,6 +774,11 @@ export default function RichTextEditor({
           text-underline-offset: 3px;
           cursor: default;
         }
+        .cap-error {
+          text-decoration: underline wavy #f97316;
+          text-underline-offset: 3px;
+          cursor: default;
+        }
         .spell-hover {
           background-color: #bfdbfe;
           border-radius: 2px;

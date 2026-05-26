@@ -85,6 +85,58 @@ function buildHoverDecorations(doc: Node, word: string | null): DecorationSet {
   return DecorationSet.create(doc, decorations);
 }
 
+export const capCheckKey = new PluginKey<DecorationSet>("capCheck");
+
+function buildCapDecorations(doc: Node): DecorationSet {
+  const decorations: Decoration[] = [];
+
+  doc.forEach((blockNode, blockOffset) => {
+    if (!blockNode.isBlock) return;
+
+    // Collect chars with their document positions
+    const chars: { char: string; docPos: number }[] = [];
+    blockNode.descendants((node, nodePos) => {
+      if (!node.isText || !node.text) return;
+      for (let i = 0; i < node.text.length; i++) {
+        chars.push({ char: node.text[i], docPos: blockOffset + 1 + nodePos + i });
+      }
+    });
+
+    if (chars.length === 0) return;
+
+    // First character of block must be uppercase
+    if (/[a-zæøå]/.test(chars[0].char)) {
+      decorations.push(Decoration.inline(chars[0].docPos, chars[0].docPos + 1, { class: "cap-error" }));
+    }
+
+    // After . ? ! the next non-space letter must be uppercase
+    let afterSentenceEnd = false;
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i].char;
+
+      if (afterSentenceEnd) {
+        if (c === " ") continue;
+        if (/[a-zæøå]/.test(c)) {
+          decorations.push(Decoration.inline(chars[i].docPos, chars[i].docPos + 1, { class: "cap-error" }));
+        }
+        afterSentenceEnd = false;
+        continue;
+      }
+
+      if (c === "." || c === "?" || c === "!") {
+        // Skip dots in decimal numbers (e.g. 3.14)
+        if (c === "." && i > 0 && /\d/.test(chars[i - 1].char)) continue;
+        // Skip dots after single letter (initials / abbreviations like f.eks.)
+        if (c === "." && i > 0 && /[a-zA-ZæøåÆØÅ]/.test(chars[i - 1].char) &&
+            (i < 2 || !/[a-zA-ZæøåÆØÅ]/.test(chars[i - 2].char))) continue;
+        afterSentenceEnd = true;
+      }
+    }
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
 export const SpellCheckExtension = Extension.create({
   name: "spellCheck",
 
@@ -113,6 +165,17 @@ export const SpellCheckExtension = Extension.create({
             if (!ps) return DecorationSet.empty;
             return buildDecorations(state.doc, ps.errors, ps.ignored);
           },
+        },
+      }),
+
+      new Plugin<DecorationSet>({
+        key: capCheckKey,
+        state: {
+          init(_, { doc }) { return buildCapDecorations(doc); },
+          apply(tr, old) { return tr.docChanged ? buildCapDecorations(tr.doc) : old; },
+        },
+        props: {
+          decorations(state) { return capCheckKey.getState(state) ?? DecorationSet.empty; },
         },
       }),
 
