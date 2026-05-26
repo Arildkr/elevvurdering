@@ -33,7 +33,7 @@ interface ReviewAssignment {
   completed: boolean;
 }
 
-const phaseLabels = { writing: "Skrivefase", review: "Vurderingsfase", closed: "Lukket", paused: "Pauset" };
+const phaseLabels = { writing: "Skrivefase", review: "Responsfase", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
@@ -250,7 +250,7 @@ export default function AssignmentDetailPage() {
           {/* Review section */}
           {(reviewAssignments.length > 0 || assignment.phase === "review" || assignment.phase === "closed") && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="font-semibold text-gray-900 mb-2">Vurderinger</h2>
+              <h2 className="font-semibold text-gray-900 mb-2">Respons</h2>
               {reviewAssignments.length > 0 ? (
                 <>
                   <div className="text-sm text-gray-600 mb-3">
@@ -288,19 +288,19 @@ export default function AssignmentDetailPage() {
             </div>
           )}
 
-          {/* Feedback section */}
+          {/* Forbedre section */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-900 mb-2">Tilbakemeldinger</h2>
+            <h2 className="font-semibold text-gray-900 mb-2">Forbedre teksten</h2>
             {assignment.feedbackAvailable ? (
               <Link
-                href={`/assignment/${id}/feedback`}
+                href={`/assignment/${id}/forbedre`}
                 className="inline-block bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
-                Se tilbakemeldinger
+                Se tilbakemeldinger og forbedre teksten
               </Link>
             ) : (
               <div>
-                <p className="text-sm text-gray-500 mb-1">Tilbakemeldinger er ikke åpnet ennå.</p>
+                <p className="text-sm text-gray-500 mb-1">Forbedre-fasen er ikke åpnet ennå.</p>
                 {assignment.feedbackDeadline && (
                   <p className="text-xs text-gray-400">
                     Åpnes: {new Date(assignment.feedbackDeadline).toLocaleString("no-NO")}

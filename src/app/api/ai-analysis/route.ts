@@ -3,35 +3,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_KEY || "");
 
-export async function POST(request: NextRequest) {
-  try {
-    if (!process.env.GOOGLE_GENERATIVE_AI_KEY) {
-      return NextResponse.json(
-        { error: "AI service not configured" },
-        { status: 503 }
-      );
-    }
+async function callGemini(plainText: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const { text } = await request.json();
-
-    if (!text || typeof text !== "string") {
-      return NextResponse.json(
-        { error: "Invalid input" },
-        { status: 400 }
-      );
-    }
-
-    // Strip HTML for analysis
-    const plainText = text
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">");
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const prompt = `Du er en norsk norsklærer på ungdomsskolen. Du gir vennlig og konkret tilbakemelding til en ungdomsskoleelev.
+  const prompt = `Du er en norsk norsklærer på ungdomsskolen. Du gir vennlig og konkret tilbakemelding til en ungdomsskoleelev.
 
 Analyser denne teksten grundig. Skriv svaret på norsk, tilpasset en 13–16-åring. Vær konkret og unngå tung fagsjargong.
 
@@ -63,42 +38,86 @@ Viktige regler:
 - Gi konkrete råd med eksempler direkte fra teksten
 - Ta BARE med feil du faktisk observerer i teksten – ikke generelle råd uten belegg
 - Maks 3 punkter per kategori
-- Hvert punkt skal være én konkret, nyttig setning`;
+- Hvert punkt skal være én konkret, nyttig setning
+- VIKTIG: På norsk skal overskrifter IKKE ha punktum. Anbefal aldri punktum etter en overskrift – dette er korrekt norsk og er ikke en feil`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
 
-    // Parse JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+export async function POST(request: NextRequest) {
+  try {
+    if (!process.env.GOOGLE_GENERATIVE_AI_KEY) {
       return NextResponse.json(
-        {
-          spellingErrors: [],
-          dyslexiaFriendlyTips: ["Teksten er lesbar"],
-          structureTips: [],
-          overallFeedback: "Bra innsats!",
-        }
-      );
-    }
-
-    const analysis = JSON.parse(jsonMatch[0]);
-    return NextResponse.json(analysis);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("AI analysis error:", errorMessage);
-    console.error("Full error:", error);
-
-    // Check if it's an API key error
-    if (errorMessage.includes("API key") || errorMessage.includes("401")) {
-      return NextResponse.json(
-        { error: "Google API key problem - check .env.local" },
+        { error: "AI service not configured" },
         { status: 503 }
       );
     }
 
-    return NextResponse.json(
-      { error: `AI analysis failed: ${errorMessage}` },
-      { status: 500 }
-    );
+    const { text } = await request.json();
+
+    if (!text || typeof text !== "string") {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
+
+    const plainText = text
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">");
+
+    // Retry up to 2 times with backoff on rate limit errors
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+        }
+        const responseText = await callGemini(plainText);
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          return NextResponse.json({
+            spellingErrors: [],
+            dyslexiaFriendlyTips: ["Teksten er lesbar"],
+            structureTips: [],
+            overallFeedback: "Bra innsats!",
+          });
+        }
+        const analysis = JSON.parse(jsonMatch[0]);
+        return NextResponse.json(analysis);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const msg = lastError.message;
+        // Only retry on rate limit / overload errors
+        const isRetryable =
+          msg.includes("429") ||
+          msg.includes("503") ||
+          msg.includes("quota") ||
+          msg.includes("overloaded") ||
+          msg.includes("RESOURCE_EXHAUSTED");
+        if (!isRetryable) break;
+      }
+    }
+
+    const msg = lastError?.message ?? "";
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+      return NextResponse.json(
+        { error: "rate_limit" },
+        { status: 429 }
+      );
+    }
+    if (msg.includes("API key") || msg.includes("401")) {
+      return NextResponse.json(
+        { error: "AI service not configured" },
+        { status: 503 }
+      );
+    }
+
+    console.error("AI analysis failed:", msg);
+    return NextResponse.json({ error: "ai_error" }, { status: 500 });
+  } catch (error) {
+    console.error("AI analysis error:", error);
+    return NextResponse.json({ error: "ai_error" }, { status: 500 });
   }
 }

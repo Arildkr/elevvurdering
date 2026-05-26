@@ -10,7 +10,6 @@ export async function GET(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    // Verify ownership
     const assignment = await prisma.assignment.findUnique({
       where: { id },
       include: { group: { select: { adminId: true } } },
@@ -19,6 +18,7 @@ export async function GET(
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
+    // include returns all scalar fields (content, revisedContent, revisedAt, etc.) plus relations
     const texts = await prisma.text.findMany({
       where: { assignmentId: id },
       include: {

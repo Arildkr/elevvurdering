@@ -74,13 +74,15 @@ model Assignment {
 }
 
 model Text {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   assignmentId    String
   authorId        String
   content         String
-  windowSwitches  Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  windowSwitches  Int       @default(0)
+  revisedContent  String?
+  revisedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   assignment        Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   author            User               @relation(fields: [authorId], references: [id])

@@ -26,7 +26,7 @@ interface Assignment {
   _count: { texts: number; reviewAssignments: number };
 }
 
-const phaseLabels = { writing: "Skriving", review: "Vurdering", closed: "Lukket", paused: "Pauset" };
+const phaseLabels = { writing: "Skriving", review: "Respons", closed: "Lukket", paused: "Pauset" };
 const phaseColors = {
   writing: "bg-green-100 text-green-800",
   review: "bg-yellow-100 text-yellow-800",
@@ -145,6 +145,36 @@ export default function AdminAssignmentsPage() {
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">Ny oppgave</h2>
+
+          {/* Onboarding: oppgaveflyt */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Slik fungerer oppgaven</p>
+            <div className="flex items-start gap-0">
+              {[
+                { num: "1", label: "Skriving", desc: "Eleven skriver sitt utkast og bruker evt. stavekontroll og AI-analyse", color: "bg-blue-100 text-blue-700 border-blue-200" },
+                { num: "2", label: "Respons", desc: "Eleven leser og vurderer én eller flere medelevtekster anonymt", color: "bg-amber-100 text-amber-700 border-amber-200" },
+                { num: "3", label: "Forbedre", desc: "Eleven ser responsen de fikk og kan skrive et forbedret utkast", color: "bg-green-100 text-green-700 border-green-200" },
+                { num: "4", label: "Lærer", desc: "Du leser alle tekster og responser, og kan legge til egne kommentarer", color: "bg-purple-100 text-purple-700 border-purple-200" },
+              ].map((step, i, arr) => (
+                <div key={step.num} className="flex items-start flex-1 min-w-0">
+                  <div className="flex flex-col items-center flex-1 min-w-0">
+                    <div className={`flex items-center justify-center w-7 h-7 rounded-full border text-xs font-bold shrink-0 ${step.color}`}>
+                      {step.num}
+                    </div>
+                    <p className={`text-xs font-semibold mt-1.5 mb-0.5 ${step.color.split(" ")[1]}`}>{step.label}</p>
+                    <p className="text-xs text-slate-500 text-center leading-snug px-1">{step.desc}</p>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div className="mt-3.5 shrink-0 text-slate-300 text-sm mx-1">→</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-3 border-t border-slate-200 pt-2">
+              Du styrer fasene manuelt fra oppgavesiden. Trinn 2 og 3 er valgfrie — du kan avslutte etter Skriving om du vil.
+            </p>
+          </div>
+
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gruppe</label>
@@ -201,9 +231,6 @@ export default function AdminAssignmentsPage() {
               />
               <p className="text-xs text-gray-400 mt-1">Vises i en blå boks over tekstfeltet under skriving.</p>
             </div>
-            <p className="text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
-              Oppgaven aktiveres med en gang i skrivefase. Du styrer fasene manuelt fra oppgavesiden, eller kan sette frister under avanserte innstillinger.
-            </p>
             <div>
               <button
                 type="button"
@@ -225,7 +252,7 @@ export default function AdminAssignmentsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Vurderingsfrist (valgfritt)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Responsfrist (valgfritt)</label>
                       <input
                         type="datetime-local"
                         value={reviewDeadline}
@@ -236,7 +263,7 @@ export default function AdminAssignmentsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tilbakemeldingsfrist (valgfritt)
+                      Frist for Forbedre-fase (valgfritt)
                     </label>
                     <input
                       type="datetime-local"
@@ -247,7 +274,7 @@ export default function AdminAssignmentsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum antall vurderinger per elev
+                      Minimum antall responser per elev
                     </label>
                     <input
                       type="number"
@@ -316,7 +343,7 @@ export default function AdminAssignmentsPage() {
                         <div className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wide">Målform</div>
                       </div>
                       {(["writing", "review", "feedback"] as const).map((phase) => {
-                        const labels = { writing: "Skriving", review: "Vurdering", feedback: "Tilbakemelding" };
+                        const labels = { writing: "Skriving", review: "Respons", feedback: "Forbedre" };
                         const t = toolsConfig[phase];
                         return (
                           <div
