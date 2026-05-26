@@ -95,7 +95,13 @@ export default function AdminAssignmentDetailPage() {
   const [toolsDraft, setToolsDraft] = useState("");
   const [savingTools, setSavingTools] = useState(false);
   const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("admin-guide-open");
+    setShowGuide(stored === null ? true : stored === "true");
+  }, []);
 
   useEffect(() => {
     assignmentRef.current = assignment;
@@ -408,6 +414,49 @@ export default function AdminAssignmentDetailPage() {
         </div>
       </div>
 
+      {/* Workflow guide */}
+      <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
+        <button
+          onClick={() => {
+            const next = !showGuide;
+            setShowGuide(next);
+            localStorage.setItem("admin-guide-open", String(next));
+          }}
+          className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-blue-100 transition-colors"
+        >
+          <span className="text-sm font-semibold text-blue-800">Slik gjennomfører du en oppgave</span>
+          <svg className={`w-4 h-4 text-blue-600 transition-transform ${showGuide ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+        {showGuide && (
+          <div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-blue-900">
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+              <p><strong>Skrivefase</strong> — Elevene skriver og leverer teksten sin. Du kan legge til oppgavetekst og velge hvilke hjelpemidler som er tilgjengelige.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+              <p><strong>Tildel tekster</strong> — Klikk &laquo;Tildel tekster&raquo; når skrivefristen er ute. Hver elev får tildelt tekster å vurdere. Bytt deretter til Responsfase.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+              <p><strong>Responsfase</strong> — Elevene gir tilbakemeldinger på hverandres tekster. Følg med i Elevstatus-tabellen under Oversikt.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+              <p><strong>Åpne tilbakemeldinger</strong> — Når responsen er ferdig, klikk &laquo;Åpne tilbakemeldinger&raquo;. Alle elever får da tilgang til å lese tilbakemeldingene og forbedre teksten sin.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">5</span>
+              <p><strong>Individuelle unntak</strong> — Har én elev ingen medelever å vurdere? Bruk &laquo;Åpne Forbedre&raquo; i Elevstatus-tabellen for å åpne kun for den eleven.</p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">6</span>
+              <p><strong>Eksporter</strong> — Last ned rapport som HTML eller CSV når oppgaven er avsluttet. Rapporten inneholder 1. utkast, tilbakemeldinger og 2. utkast.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -418,13 +467,13 @@ export default function AdminAssignmentDetailPage() {
           <p className="text-2xl font-bold">{assignment.stats.textCount}</p>
           <p className="text-xs text-gray-500">Tekster levert</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4" title="Antall elever som har fått tildelt en tekst å vurdere">
           <p className="text-2xl font-bold">{assignment.stats.reviewAssignmentCount}</p>
           <p className="text-xs text-gray-500">Tildelinger</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4" title="Antall vurderinger som faktisk er skrevet og levert">
           <p className="text-2xl font-bold">{assignment.stats.reviewCount}</p>
-          <p className="text-xs text-gray-500">Vurderinger</p>
+          <p className="text-xs text-gray-500">Vurderinger skrevet</p>
         </div>
       </div>
 
@@ -481,6 +530,9 @@ export default function AdminAssignmentDetailPage() {
         <button
           onClick={handleDistribute}
           disabled={distributing}
+          title={assignment.distributionDone
+            ? "Tildeler tekster på nytt. Elever som allerede er i gang med vurdering kan bli påvirket."
+            : "Fordeler elevtekstene til hverandre for fagfellevurdering. Gjøres etter at skrivefristen er ute."}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {distributing ? "Tildeler..." : assignment.distributionDone ? "Tildel på nytt" : "Tildel tekster"}
@@ -488,6 +540,9 @@ export default function AdminAssignmentDetailPage() {
         <button
           onClick={handleToggleFeedback}
           disabled={togglingFeedback}
+          title={assignment.feedbackOpen
+            ? "Stenger Forbedre-fasen for alle elever."
+            : "Åpner Forbedre-fasen for alle elever i klassen. Elevene kan lese tilbakemeldingene og forbedre teksten sin."}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
             assignment.feedbackOpen
               ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
@@ -684,6 +739,7 @@ export default function AdminAssignmentDetailPage() {
                               <button
                                 onClick={() => handleUnlockFeedback(t.id, true)}
                                 disabled={unlockingFeedback === t.id}
+                                title="Åpner Forbedre-fasen kun for denne eleven — nyttig for elever som ikke har medelever å vurdere."
                                 className="text-xs bg-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
                               >
                                 {unlockingFeedback === t.id ? "..." : "Åpne Forbedre"}
