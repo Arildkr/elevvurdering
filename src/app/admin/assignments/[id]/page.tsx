@@ -101,17 +101,12 @@ export default function AdminAssignmentDetailPage() {
   const [toolsDraft, setToolsDraft] = useState("");
   const [savingTools, setSavingTools] = useState(false);
   const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
   useEffect(() => {
     assignmentRef.current = assignment;
   }, [assignment]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("admin-guide-open");
-    setShowGuide(stored === "true");
-  }, []);
 
   useEffect(() => {
     loadData();
@@ -400,10 +395,19 @@ export default function AdminAssignmentDetailPage() {
     <div className="p-6 max-w-5xl mx-auto">
 
       {/* Breadcrumb */}
-      <Link href="/admin/assignments" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-5">
-        <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
-        Tilbake til oppgaver
-      </Link>
+      <div className="flex items-center justify-between mb-5">
+        <Link href="/admin/assignments" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+          Tilbake til oppgaver
+        </Link>
+        <button
+          onClick={() => setShowGuideModal(true)}
+          title="Slik gjennomfører du en oppgave"
+          className="w-7 h-7 rounded-full bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 flex items-center justify-center text-sm font-semibold transition-colors"
+        >
+          ?
+        </button>
+      </div>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -431,26 +435,48 @@ export default function AdminAssignmentDetailPage() {
         </div>
       </div>
 
-      {/* Phase stepper */}
+      {/* Phase stepper — completed steps are clickable to go back */}
       <div className="flex items-start mb-6">
         {stepLabels.map((label, i) => {
           const step = i + 1;
           const isCompleted = step < currentStep;
           const isCurrent = step === currentStep;
+
+          // Determine back-action for completed steps
+          let backAction: (() => void) | null = null;
+          if (isCompleted) {
+            if (step === 1) backAction = () => handlePhaseChange("writing");
+            else if (step === 2) backAction = () => handlePhaseChange("review");
+            else if (step === 3 && assignment.phase !== "closed") backAction = handleToggleFeedback;
+          }
+
+          const circle = (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+              isCompleted
+                ? backAction ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" : "bg-blue-600 text-white"
+                : isCurrent
+                ? "bg-white border-2 border-blue-600 text-blue-600"
+                : "bg-gray-100 text-gray-400"
+            }`}>
+              {isCompleted ? (
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3.5 3.5L13 4"/></svg>
+              ) : step}
+            </div>
+          );
+
           return (
             <div key={step} className="flex items-start flex-1 last:flex-initial">
               <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                  isCompleted
-                    ? "bg-blue-600 text-white"
-                    : isCurrent
-                    ? "bg-white border-2 border-blue-600 text-blue-600"
-                    : "bg-gray-100 text-gray-400"
-                }`}>
-                  {isCompleted ? (
-                    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3.5 3.5L13 4"/></svg>
-                  ) : step}
-                </div>
+                {backAction ? (
+                  <button
+                    onClick={backAction}
+                    disabled={changingPhase || togglingFeedback}
+                    title={`Gå tilbake til ${label}`}
+                    className="disabled:opacity-50"
+                  >
+                    {circle}
+                  </button>
+                ) : circle}
                 <span className={`text-xs mt-1 font-medium whitespace-nowrap ${
                   isCurrent ? "text-blue-700" : isCompleted ? "text-blue-500" : "text-gray-400"
                 }`}>
@@ -587,18 +613,6 @@ export default function AdminAssignmentDetailPage() {
               />
             </div>
             <div className="flex gap-3 flex-wrap items-center">
-              <a
-                href={`/api/assignments/${id}/export`}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Eksporter HTML
-              </a>
-              <a
-                href={`/api/assignments/${id}/export?format=csv`}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Eksporter CSV
-              </a>
               <div className="flex-1" />
               <button
                 onClick={handleToggleFeedback}
@@ -621,20 +635,9 @@ export default function AdminAssignmentDetailPage() {
         {/* Step 4: Avsluttet */}
         {currentStep === 4 && (
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Oppgaven er avsluttet</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">Oppgaven er avsluttet</h3>
+            <p className="text-sm text-gray-500 mb-3">Eksporter rapport under Innstillinger, eller gjenåpne for å gjøre endringer.</p>
             <div className="flex gap-3 flex-wrap items-center">
-              <a
-                href={`/api/assignments/${id}/export`}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Eksporter HTML
-              </a>
-              <a
-                href={`/api/assignments/${id}/export?format=csv`}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Eksporter CSV
-              </a>
               <div className="flex-1" />
               <button
                 onClick={() => handlePhaseChange("review")}
@@ -1011,53 +1014,6 @@ export default function AdminAssignmentDetailPage() {
       {tab === "settings" && (
         <div className="space-y-5">
 
-          {/* Workflow guide */}
-          <div className="rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
-            <button
-              onClick={() => {
-                const next = !showGuide;
-                setShowGuide(next);
-                localStorage.setItem("admin-guide-open", String(next));
-              }}
-              className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-blue-100 transition-colors"
-            >
-              <span className="text-sm font-semibold text-blue-800">Slik gjennomfører du en oppgave</span>
-              <svg className={`w-4 h-4 text-blue-600 transition-transform ${showGuide ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4"/></svg>
-            </button>
-            {showGuide && (
-              <div className="px-5 pb-4 flex flex-col sm:flex-row gap-x-8 gap-y-2 text-sm text-blue-900">
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-                    <p><strong>Skrivefase</strong> — Elevene skriver og leverer teksten sin. Du kan legge til oppgavetekst og velge hjelpemidler under Innstillinger.</p>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
-                    <p><strong>Tildel tekster</strong> — Klikk «Tildel tekster» når skrivefristen er ute, deretter «Bytt til Responsfase».</p>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>
-                    <p><strong>Responsfase</strong> — Elevene gir tilbakemeldinger på hverandres tekster. Følg med i Elevstatus-tabellen.</p>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">4</span>
-                    <p><strong>Åpne Revidering</strong> — Klikk «Åpne Revidering for alle». Elevene leser tilbakemeldingene og leverer et revidert utkast.</p>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">5</span>
-                    <p><strong>Individuelle unntak</strong> — Elev uten medelever? Bruk «Åpne Revidering» per elev i Elevstatus-tabellen.</p>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">6</span>
-                    <p><strong>Eksporter</strong> — Last ned rapport (HTML/CSV) med 1. utkast, tilbakemeldinger og revidert utkast.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Oppgavetekst */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-2">
@@ -1274,6 +1230,60 @@ export default function AdminAssignmentDetailPage() {
             <p className="text-xs text-gray-400 mt-2">Arkivering skjuler oppgaven for elever. Sletting er permanent og kan ikke angres.</p>
           </div>
 
+        </div>
+      )}
+
+      {/* Guide modal overlay */}
+      {showGuideModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          onClick={() => setShowGuideModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900">Slik gjennomfører du en oppgave</h2>
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="text-gray-400 hover:text-gray-700 transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l10 10M13 3L3 13"/></svg>
+              </button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-x-8 gap-y-2 text-sm text-gray-800">
+              <div className="flex-1 space-y-3">
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                  <p><strong>Skrivefase</strong> — Elevene skriver og leverer teksten sin. Du kan legge til oppgavetekst og velge hjelpemidler under Innstillinger.</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                  <p><strong>Tildel tekster</strong> — Klikk «Tildel tekster» når skrivefristen er ute, deretter «Bytt til Responsfase».</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                  <p><strong>Responsfase</strong> — Elevene gir tilbakemeldinger på hverandres tekster. Følg med i Elevstatus-tabellen.</p>
+                </div>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+                  <p><strong>Åpne Revidering</strong> — Klikk «Åpne Revidering for alle». Elevene leser tilbakemeldingene og leverer et revidert utkast.</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">5</span>
+                  <p><strong>Individuelle unntak</strong> — Elev uten medelever? Bruk «Åpne Revidering» per elev i Elevstatus-tabellen.</p>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">6</span>
+                  <p><strong>Eksporter</strong> — Last ned rapport (HTML/CSV) med 1. utkast, tilbakemeldinger og revidert utkast.</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-4">Tips: Klikk på fullførte faser i fremgangslinjen for å gå tilbake til en tidligere fase.</p>
+          </div>
         </div>
       )}
 
