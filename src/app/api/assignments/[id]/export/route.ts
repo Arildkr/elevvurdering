@@ -44,8 +44,8 @@ export async function GET(
 
     const format = request.nextUrl.searchParams.get("format");
 
-    if (format === "csv") {
-      return buildCsvExport(assignment, texts);
+    if (format === "pdf") {
+      return buildPdfExport(assignment, texts);
     }
 
     return buildHtmlExport(assignment, texts);
@@ -188,49 +188,83 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
   });
 }
 
-function buildCsvExport(assignment: AssignmentData, texts: TextWithReviews[]) {
-  const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ");
-  const rows: string[] = [];
-  rows.push("Forfatter,Kandidatnr,1. utkast,Tilbakemelding (anonym),Status,2. utkast (forbedret),2. utkast dato");
+function buildPdfExport(assignment: AssignmentData, texts: TextWithReviews[]) {
+  const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const date = new Date().toLocaleDateString("no-NO");
 
+  let body = "";
   for (const text of texts) {
-    if (text.reviews.length === 0) {
-      rows.push(csvRow([
-        text.author.name,
-        text.author.kandidatnummer,
-        stripHtml(text.content),
-        "",
-        "",
-        stripHtml(text.revisedContent ?? ""),
-        text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
-      ]));
-    } else {
-      for (let i = 0; i < text.reviews.length; i++) {
-        const review = text.reviews[i];
-        rows.push(csvRow([
-          text.author.name,
-          text.author.kandidatnummer,
-          i === 0 ? stripHtml(text.content) : "",
-          stripHtml(review.content),
-          review.rejectedAt ? "Underkjent" : "Godkjent",
-          i === 0 ? stripHtml(text.revisedContent ?? "") : "",
-          i === 0 && text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
-        ]));
+    const activeReviews = text.reviews.filter(r => !r.rejectedAt);
+    body += `<div class="student-page">
+<div class="student-header">
+  <div class="student-name">${escapeHtml(text.author.name)}</div>
+  <div class="student-meta">${escapeHtml(text.author.kandidatnummer)} &middot; Levert ${text.createdAt.toLocaleDateString("no-NO")}</div>
+</div>
+<div class="section-label draft1">1. utkast</div>
+<div class="text-box">${text.content}</div>
+<div class="section-label feedback">Tilbakemeldinger fra medelever (${activeReviews.length})</div>`;
+
+    if (text.teacherFeedbacks.length > 0) {
+      for (const tf of text.teacherFeedbacks) {
+        body += `<div class="review teacher-review"><strong>L\u00E6rer</strong><div>${escapeHtml(tf.content)}</div></div>`;
       }
     }
+    if (activeReviews.length > 0) {
+      for (const r of activeReviews) {
+        body += `<div class="review"><div class="review-content">${r.content}</div></div>`;
+      }
+    } else {
+      body += `<p class="none">Ingen tilbakemeldinger.</p>`;
+    }
+
+    body += `<div class="section-label draft2">2. utkast (forbedret)</div>`;
+    if (text.revisedContent) {
+      body += `<div class="text-box revised">${text.revisedContent}</div>`;
+    } else {
+      body += `<p class="none">Ikke levert forbedret utkast.</p>`;
+    }
+    body += `</div>`;
   }
 
-  const csv = "\uFEFF" + rows.join("\n"); // BOM for Excel UTF-8
-  const filename = `elevvurdering-${assignment.title.replace(/[^a-zA-Z0-9]/g, "_")}.csv`;
+  const html = `<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(assignment.title)} \u2013 PDF</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, serif; font-size: 11pt; color: #111; margin: 0; }
+  @page { size: A4; margin: 20mm 18mm; }
+  .student-page { page-break-before: always; }
+  .student-page:first-child { page-break-before: auto; }
+  .report-header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 20px; }
+  .report-header h1 { font-size: 16pt; margin: 0 0 4px; }
+  .report-header .meta { font-size: 9pt; color: #555; }
+  .student-name { font-size: 14pt; font-weight: bold; margin-bottom: 2px; }
+  .student-meta { font-size: 9pt; color: #666; margin-bottom: 14px; }
+  .section-label { font-size: 8pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin: 14px 0 6px; padding: 3px 8px; border-radius: 3px; display: inline-block; }
+  .draft1 { background: #dbeafe; color: #1e40af; }
+  .feedback { background: #f3f4f6; color: #374151; }
+  .draft2 { background: #dcfce7; color: #166534; }
+  .text-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 10px 14px; margin-bottom: 6px; line-height: 1.6; }
+  .text-box p, .review-content p { margin: 0 0 6px; }
+  .revised { border-color: #86efac; background: #f0fdf4; }
+  .review { border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 12px; margin-bottom: 8px; }
+  .teacher-review { border-color: #d8b4fe; background: #faf5ff; }
+  .none { color: #9ca3af; font-style: italic; font-size: 10pt; }
+</style>
+</head>
+<body>
+<div class="report-header">
+  <h1>${escapeHtml(assignment.title)}</h1>
+  <div class="meta">${escapeHtml(assignment.group.name)} &middot; Eksportert ${date} &middot; ${texts.length} elever</div>
+</div>
+${body}
+<script>window.onload = function() { window.print(); };<\/script>
+</body>
+</html>`;
 
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
+  return new NextResponse(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
-}
-
-function csvRow(values: string[]): string {
-  return values.map((v: string) => `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`).join(",");
 }
