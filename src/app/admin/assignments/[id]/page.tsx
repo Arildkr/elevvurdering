@@ -466,23 +466,28 @@ export default function AdminAssignmentDetailPage() {
 
           return (
             <div key={step} className="flex items-start flex-1 last:flex-initial">
-              <div className="flex flex-col items-center">
-                {backAction ? (
-                  <button
-                    onClick={backAction}
-                    disabled={changingPhase || togglingFeedback}
-                    title={`Gå tilbake til ${label}`}
-                    className="disabled:opacity-50"
-                  >
-                    {circle}
-                  </button>
-                ) : circle}
-                <span className={`text-xs mt-1 font-medium whitespace-nowrap ${
-                  isCurrent ? "text-blue-700" : isCompleted ? "text-blue-500" : "text-gray-400"
-                }`}>
-                  {label}
-                </span>
-              </div>
+              {backAction ? (
+                <button
+                  onClick={backAction}
+                  disabled={changingPhase || togglingFeedback}
+                  title={`Gå tilbake til ${label}`}
+                  className="flex flex-col items-center disabled:opacity-50 group"
+                >
+                  {circle}
+                  <span className="text-xs mt-1 font-medium whitespace-nowrap text-blue-500 group-hover:text-blue-700 transition-colors">
+                    {label}
+                  </span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center">
+                  {circle}
+                  <span className={`text-xs mt-1 font-medium whitespace-nowrap ${
+                    isCurrent ? "text-blue-700" : "text-gray-400"
+                  }`}>
+                    {label}
+                  </span>
+                </div>
+              )}
               {i < stepLabels.length - 1 && (
                 <div className={`flex-1 h-px mt-4 mx-2 ${step < currentStep ? "bg-blue-400" : "bg-gray-200"}`} />
               )}
