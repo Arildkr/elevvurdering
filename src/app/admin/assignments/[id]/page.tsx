@@ -100,7 +100,7 @@ export default function AdminAssignmentDetailPage() {
 
   useEffect(() => {
     const stored = localStorage.getItem("admin-guide-open");
-    setShowGuide(stored === null ? true : stored === "true");
+    setShowGuide(stored === "true");
   }, []);
 
   useEffect(() => {
