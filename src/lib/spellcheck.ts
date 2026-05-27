@@ -1,4 +1,4 @@
-import { KNOWN_CONFUSIONS } from "./norwegian-confusions";
+import { getConfusions } from "./norwegian-confusions";
 
 export interface SpellError {
   word: string;
@@ -36,6 +36,7 @@ const RULE_BADGE: Record<string, string> = {
   "dialekt":        "dialekt",
   "sammenskriving": "sammenskriving",
   "stavemåte":      "stavemåte",
+  "bokmål":         "bokmål",
 };
 
 export interface ConfusionPair {
@@ -60,7 +61,8 @@ const LEGIT_J_WORDS = new Set([
 
 const WORD_RE = /(?<![a-zA-ZæøåÆØÅ])[a-zA-ZæøåÆØÅ]{2,}(?![a-zA-ZæøåÆØÅ])/g;
 
-export function getDyslexiaFriendlyIssues(content: string): ReadingIssue[] {
+export function getDyslexiaFriendlyIssues(content: string, lang: "nb" | "nn" = "nb"): ReadingIssue[] {
+  const KNOWN_CONFUSIONS = getConfusions(lang);
   const plainText = content
     .replace(/<[^>]*>/g, " ")
     .replace(/&[a-z]+;/g, " ")

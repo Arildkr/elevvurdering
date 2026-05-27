@@ -18,7 +18,7 @@ import {
   type AIAnalysis,
   type ReadingIssue,
 } from "@/lib/spellcheck";
-import { KNOWN_CONFUSIONS } from "@/lib/norwegian-confusions";
+import { getConfusions } from "@/lib/norwegian-confusions";
 import {
   DEFAULT_PHASE_TOOLS,
   type PhaseTools,
@@ -104,6 +104,7 @@ export default function RichTextEditor({
 
   // Client-side check of KNOWN_CONFUSIONS — instant, no API needed
   const getKnownErrors = useCallback((html: string, ignored: Set<string>): SpellError[] => {
+    const confusions = getConfusions(lang);
     const plain = html.replace(/<[^>]*>/g, " ").replace(/&[a-z]+;/g, " ").replace(/&nbsp;/g, " ");
     const re = /(?<![a-zA-ZæøåÆØÅ])[a-zA-ZæøåÆØÅ]{2,}(?![a-zA-ZæøåÆØÅ])/g;
     const seen = new Map<string, SpellError>();
@@ -112,11 +113,11 @@ export default function RichTextEditor({
       const word = m[0];
       const key = word.toLowerCase();
       if (ignored.has(key) || seen.has(key)) continue;
-      const c = KNOWN_CONFUSIONS[key];
+      const c = confusions[key];
       if (c) seen.set(key, { word, suggestions: [c.standard] });
     }
     return Array.from(seen.values());
-  }, []);
+  }, [lang]);
 
   const runSpellCheck = useCallback(
     async (html: string, currentLang: Lang, ignored: Set<string>, editor: ReturnType<typeof useEditor>) => {
@@ -190,7 +191,7 @@ export default function RichTextEditor({
       const html = e.getHTML();
       onChange(html);
       if (readingHelpEnabled) {
-        setDyslexiaIssues(getDyslexiaFriendlyIssues(html));
+        setDyslexiaIssues(getDyslexiaFriendlyIssues(html, lang));
       }
       if (spellCheckEnabled) {
         const text = e.state.doc.textContent;

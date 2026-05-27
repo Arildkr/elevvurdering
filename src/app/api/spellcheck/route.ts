@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nspell from "nspell";
-import { KNOWN_CONFUSIONS } from "@/lib/norwegian-confusions";
+import { getConfusions } from "@/lib/norwegian-confusions";
 
 type SpellInstance = ReturnType<typeof nspell>;
 
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
 
     const safeLang = lang === "nn" ? "nn" : "nb";
     const spell = await loadDict(safeLang);
+    const confusions = getConfusions(safeLang);
 
     const plainText = text
       .replace(/<[^>]*>/g, " ")
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
       const key = word.toLowerCase();
       if (seen.has(key) || /^\d+$/.test(word)) continue;
 
-      const confusion = KNOWN_CONFUSIONS[key];
+      const confusion = confusions[key];
       if (confusion) {
         // Always flag known forvekslingslyder/dialect words, even if Hunspell accepts them
         const extra = await enhancedSuggestions(key, spell);
