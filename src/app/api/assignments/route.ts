@@ -80,6 +80,7 @@ export async function GET() {
           hasSubmitted: !!text,
           unreadCount,
           pendingReviews,
+          feedbackOpen: a.feedbackOpen,
           timerEndAt: a.timerEndAt,
           timerLabel: a.timerLabel,
         };

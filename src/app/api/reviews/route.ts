@@ -3,6 +3,7 @@ import { prisma, type TransactionClient } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { getAssignmentPhase } from "@/lib/phase";
 import { createReviewSchema } from "@/lib/validation/review";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
           reviewAssignmentId,
           textId: reviewAssignment.text.id,
           reviewerId: user.id,
-          content,
+          content: sanitizeHtml(content),
         },
       });
 

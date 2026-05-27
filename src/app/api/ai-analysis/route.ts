@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { validateSession } from "@/lib/auth";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_KEY || "");
 
@@ -47,6 +48,11 @@ Viktige regler:
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await validateSession();
+    if (!user) {
+      return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
+    }
+
     if (!process.env.GOOGLE_GENERATIVE_AI_KEY) {
       return NextResponse.json(
         { error: "AI service not configured" },

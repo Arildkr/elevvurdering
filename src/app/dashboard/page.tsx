@@ -15,6 +15,7 @@ interface Assignment {
   hasSubmitted: boolean;
   unreadCount: number;
   pendingReviews: number;
+  feedbackOpen: boolean;
   timerEndAt: string | null;
   timerLabel: string | null;
 }
@@ -207,16 +208,18 @@ export default function DashboardPage() {
                       <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
                     </Link>
                   )}
-                  {a.unreadCount > 0 && (
+                  {(a.unreadCount > 0 || a.feedbackOpen) && (
                     <Link
                       href={`/assignment/${a.id}/forbedre`}
                       className="inline-flex items-center gap-1.5 bg-green-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                     >
-                      {a.unreadCount} ny tilbakemelding{a.unreadCount > 1 ? "er" : ""} — forbedre teksten
+                      {a.unreadCount > 0
+                        ? `${a.unreadCount} ny tilbakemelding${a.unreadCount > 1 ? "er" : ""} — forbedre teksten`
+                        : "Revideringsfase åpen — se tilbakemeldinger"}
                       <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
                     </Link>
                   )}
-                  {a.phase === "review" && a.pendingReviews === 0 && a.unreadCount === 0 && (
+                  {a.phase === "review" && a.pendingReviews === 0 && a.unreadCount === 0 && !a.feedbackOpen && (
                     <span className="text-sm text-gray-500">Venter på at andre elever skal levere respons</span>
                   )}
                   {a.phase === "paused" && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export async function GET(
   _request: NextRequest,
@@ -78,7 +79,7 @@ export async function POST(
         textId,
         assignmentId: id,
         adminId: admin.id,
-        content: content.trim(),
+        content: sanitizeHtml(content.trim()),
       },
     });
 
