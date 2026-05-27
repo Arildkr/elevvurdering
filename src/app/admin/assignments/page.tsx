@@ -42,6 +42,8 @@ export default function AdminAssignmentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [archiving, setArchiving] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -125,6 +127,22 @@ export default function AdminAssignmentsPage() {
       setFormError("Noe gikk galt");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleArchive(assignmentId: string) {
+    if (!confirm("Arkivere oppgaven? Den skjules for elever, men kan gjenåpnes.")) return;
+    setArchiving(assignmentId);
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}/phase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "archived" }),
+      });
+      if (res.ok) loadData();
+      else alert((await res.json()).error || "Noe gikk galt");
+    } finally {
+      setArchiving(null);
     }
   }
 
@@ -393,55 +411,93 @@ export default function AdminAssignmentsPage() {
         </div>
       )}
 
-      {assignments.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">Ingen oppgaver opprettet ennå.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tittel</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Gruppe</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Fase</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tekster</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tildelt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map((a) => (
-                <tr
-                  key={a.id}
-                  onClick={() => router.push(`/admin/assignments/${a.id}`)}
-                  className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+      {(() => {
+        const active = assignments.filter((a) => !a.isArchived);
+        const archived = assignments.filter((a) => a.isArchived);
+
+        const AssignmentRow = ({ a }: { a: Assignment }) => (
+          <tr
+            key={a.id}
+            onClick={() => router.push(`/admin/assignments/${a.id}`)}
+            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+          >
+            <td className="px-6 py-4 font-medium text-gray-900">{a.title}</td>
+            <td className="px-6 py-4 text-gray-600">{a.group.name}</td>
+            <td className="px-6 py-4">
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>
+                {phaseLabels[a.phase]}
+              </span>
+            </td>
+            <td className="px-6 py-4 text-gray-600">{a._count.texts}</td>
+            <td className="px-6 py-4">
+              {a.distributionDone ? (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Ja</span>
+              ) : (
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Nei</span>
+              )}
+            </td>
+            <td className="px-4 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+              {!a.isArchived && (
+                <button
+                  onClick={() => handleArchive(a.id)}
+                  disabled={archiving === a.id}
+                  className="text-xs text-gray-400 hover:text-gray-700 font-medium disabled:opacity-50 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
                 >
-                  <td className="px-6 py-4 font-medium text-gray-900">{a.title}</td>
-                  <td className="px-6 py-4 text-gray-600">{a.group.name}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>
-                        {phaseLabels[a.phase]}
-                      </span>
-                      {a.isArchived && (
-                        <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-200 text-gray-500">Arkivert</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{a._count.texts}</td>
-                  <td className="px-6 py-4">
-                    {a.distributionDone ? (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Ja</span>
-                    ) : (
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Nei</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  {archiving === a.id ? "..." : "Arkiver"}
+                </button>
+              )}
+            </td>
+          </tr>
+        );
+
+        const tableHead = (
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tittel</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Gruppe</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Fase</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tekster</th>
+              <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Tildelt</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+        );
+
+        return (
+          <>
+            {active.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+                <p className="text-gray-500">Ingen aktive oppgaver.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+                <table className="w-full">
+                  {tableHead}
+                  <tbody>{active.map((a) => <AssignmentRow key={a.id} a={a} />)}</tbody>
+                </table>
+              </div>
+            )}
+
+            {archived.length > 0 && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowArchived((v) => !v)}
+                  className="w-full flex items-center justify-between px-6 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                >
+                  <span className="text-sm font-medium text-gray-500">Arkiverte oppgaver ({archived.length})</span>
+                  <svg className={`w-4 h-4 text-gray-400 transition-transform ${showArchived ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6l4 4 4-4"/></svg>
+                </button>
+                {showArchived && (
+                  <table className="w-full bg-white">
+                    {tableHead}
+                    <tbody>{archived.map((a) => <AssignmentRow key={a.id} a={a} />)}</tbody>
+                  </table>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

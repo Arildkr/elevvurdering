@@ -81,6 +81,7 @@ export default function LoginPage() {
                   maxLength={20}
                   required
                   autoFocus
+                  autoComplete="off"
                 />
               </div>
 
