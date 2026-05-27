@@ -102,6 +102,7 @@ export default function AdminAssignmentDetailPage() {
   const [savingTools, setSavingTools] = useState(false);
   const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [members, setMembers] = useState<{ id: string; name: string; kandidatnummer: string }[]>([]);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
   useEffect(() => {
@@ -126,16 +127,20 @@ export default function AdminAssignmentDetailPage() {
   async function loadData() {
     try {
       const aRes = await fetch(`/api/assignments/${id}`);
-      if (aRes.ok) setAssignment(await aRes.json());
+      if (!aRes.ok) return;
+      const assignmentData: AssignmentDetail = await aRes.json();
+      setAssignment(assignmentData);
 
-      const tRes = await fetch(`/api/assignments/${id}/texts`);
+      const [tRes, rRes, tfRes, mRes] = await Promise.all([
+        fetch(`/api/assignments/${id}/texts`),
+        fetch(`/api/assignments/${id}/reviews`),
+        fetch(`/api/assignments/${id}/teacher-feedback`),
+        fetch(`/api/groups/${assignmentData.group.id}/members`),
+      ]);
       if (tRes.ok) setTexts(await tRes.json());
-
-      const rRes = await fetch(`/api/assignments/${id}/reviews`);
       if (rRes.ok) setReviews(await rRes.json());
-
-      const tfRes = await fetch(`/api/assignments/${id}/teacher-feedback`);
       if (tfRes.ok) setTeacherFeedbacks(await tfRes.json());
+      if (mRes.ok) setMembers(await mRes.json());
     } finally {
       setLoading(false);
     }
@@ -660,11 +665,25 @@ export default function AdminAssignmentDetailPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium text-gray-700">Elevstatus</h3>
-            {texts.length < assignment.stats.memberCount && (
-              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
-                {assignment.stats.memberCount - texts.length} elev{assignment.stats.memberCount - texts.length !== 1 ? "er" : ""} har ikke levert tekst
-              </span>
-            )}
+            {texts.length < assignment.stats.memberCount && (() => {
+              const submittedKnr = new Set(texts.map((t) => t.author.kandidatnummer));
+              const missing = members.filter((m) => !submittedKnr.has(m.kandidatnummer));
+              const count = assignment.stats.memberCount - texts.length;
+              return (
+                <div className="relative group">
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full cursor-default">
+                    {count} elev{count !== 1 ? "er" : ""} har ikke levert tekst
+                  </span>
+                  {missing.length > 0 && (
+                    <div className="absolute right-0 top-full mt-1 z-10 invisible group-hover:visible bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                      {missing.map((m) => (
+                        <div key={m.id}>{m.name}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
