@@ -47,6 +47,9 @@ export async function GET(
     if (format === "pdf") {
       return buildPdfExport(assignment, texts);
     }
+    if (format === "csv") {
+      return buildCsvExport(assignment, texts);
+    }
 
     return buildHtmlExport(assignment, texts);
   } catch (error) {
@@ -186,6 +189,48 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+}
+
+function buildCsvExport(assignment: AssignmentData, texts: TextWithReviews[]) {
+  const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ");
+  const rows: string[] = [];
+  rows.push("Forfatter,Kandidatnr,1. utkast,Tilbakemelding (anonym),Status,2. utkast (forbedret),2. utkast dato");
+
+  for (const text of texts) {
+    if (text.reviews.length === 0) {
+      rows.push(csvRow([
+        text.author.name, text.author.kandidatnummer,
+        stripHtml(text.content), "", "",
+        stripHtml(text.revisedContent ?? ""),
+        text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+      ]));
+    } else {
+      for (let i = 0; i < text.reviews.length; i++) {
+        const review = text.reviews[i];
+        rows.push(csvRow([
+          text.author.name, text.author.kandidatnummer,
+          i === 0 ? stripHtml(text.content) : "",
+          stripHtml(review.content),
+          review.rejectedAt ? "Underkjent" : "Godkjent",
+          i === 0 ? stripHtml(text.revisedContent ?? "") : "",
+          i === 0 && text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+        ]));
+      }
+    }
+  }
+
+  const csv = "﻿" + rows.join("\n");
+  const filename = `elevvurdering-${assignment.title.replace(/[^a-zA-Z0-9]/g, "_")}.csv`;
+  return new NextResponse(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}
+
+function csvRow(values: string[]): string {
+  return values.map((v) => `"${v.replace(/"/g, '""').replace(/\n/g, " ")}"`).join(",");
 }
 
 function buildPdfExport(assignment: AssignmentData, texts: TextWithReviews[]) {
