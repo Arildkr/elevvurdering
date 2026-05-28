@@ -657,22 +657,17 @@ export default function AdminAssignmentDetailPage() {
                 Last ned PDF
               </a>
               <a
+                href={`/api/assignments/${id}/export?format=xlsx`}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                Last ned Excel
+              </a>
+              <a
                 href={`/api/assignments/${id}/export`}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Eksporter HTML
               </a>
-              <button
-                onClick={() => {
-                  const csvUrl = `${window.location.origin}/api/assignments/${id}/export?format=csv`;
-                  const googleSheetsUrl = `https://docs.google.com/spreadsheets/create?title=${encodeURIComponent(`Elevvurdering - ${assignment.title}`)}`;
-                  alert(`Åpne Google Sheets og importer CSV-filen:\n\nCSV-URL: ${csvUrl}\n\nGå til Fil → Importer → URL i Google Sheets.`);
-                  window.open(googleSheetsUrl, "_blank");
-                }}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                Åpne i Google Sheets
-              </button>
               <div className="flex-1" />
               <button
                 onClick={() => handlePhaseChange("review")}
@@ -1247,16 +1242,12 @@ export default function AdminAssignmentDetailPage() {
               <a href={`/api/assignments/${id}/export`} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
                 Eksporter HTML
               </a>
-              <button
-                onClick={() => {
-                  const csvUrl = `${window.location.origin}/api/assignments/${id}/export?format=csv`;
-                  alert(`Åpne Google Sheets og importer CSV-filen:\n\nCSV-URL: ${csvUrl}\n\nGå til Fil → Importer → URL i Google Sheets.`);
-                  window.open(`https://docs.google.com/spreadsheets/create?title=${encodeURIComponent(`Elevvurdering - ${assignment.title}`)}`, "_blank");
-                }}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              <a
+                href={`/api/assignments/${id}/export?format=xlsx`}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
-                Åpne i Google Sheets
-              </button>
+                Last ned Excel
+              </a>
             </div>
           </div>
 

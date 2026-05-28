@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 interface TextEntry {
   id: string;
   authorId: string;
+  content?: string;
 }
 
 interface ExistingAssignment {
@@ -39,16 +40,22 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
   });
   const minReviews = assignment?.minReviews ?? 1;
 
-  const texts: TextEntry[] = await prisma.text.findMany({
+  const allTexts = await prisma.text.findMany({
     where: {
       assignmentId,
       author: { isActive: true },
     },
-    select: { id: true, authorId: true },
+    select: { id: true, authorId: true, content: true },
+  });
+
+  // Filter out blank submissions (strip HTML tags, require at least 30 characters)
+  const texts: TextEntry[] = allTexts.filter((t) => {
+    const plain = t.content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+    return plain.length >= 30;
   });
 
   if (texts.length < 2) {
-    throw new Error("Trenger minst 2 innleveringer for å fordele reviews");
+    throw new Error("Trenger minst 2 innleveringer med innhold for å fordele reviews");
   }
 
   // Get existing active assignments to avoid duplicates

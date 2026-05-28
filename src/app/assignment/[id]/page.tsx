@@ -74,13 +74,17 @@ export default function AssignmentDetailPage() {
     return () => clearInterval(interval);
   }, [assignment?.timerEndAt]);
 
-  // Poll every 5 seconds for real-time updates (phase changes, timer, etc.)
+  // Poll every 5 seconds for real-time updates (phase changes, timer, review assignments)
   useEffect(() => {
     if (!id) return;
     const poll = setInterval(async () => {
       try {
-        const res = await fetch(`/api/assignments/${id}`);
-        if (res.ok) setAssignment(await res.json());
+        const [aRes, rRes] = await Promise.all([
+          fetch(`/api/assignments/${id}`),
+          fetch(`/api/assignments/${id}/my-review-assignment`),
+        ]);
+        if (aRes.ok) setAssignment(await aRes.json());
+        if (rRes.ok) setReviewAssignments(await rRes.json());
       } catch { /* ignore */ }
     }, 5000);
     return () => clearInterval(poll);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import * as XLSX from "xlsx";
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +47,9 @@ export async function GET(
 
     if (format === "pdf") {
       return buildPdfExport(assignment, texts);
+    }
+    if (format === "xlsx") {
+      return buildXlsxExport(assignment, texts);
     }
     if (format === "csv") {
       return buildCsvExport(assignment, texts);
@@ -186,6 +190,63 @@ function buildHtmlExport(assignment: AssignmentData, texts: TextWithReviews[]) {
   return new NextResponse(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+}
+
+function buildXlsxExport(assignment: AssignmentData, texts: TextWithReviews[]) {
+  const stripHtml = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+
+  const rows: (string | number)[][] = [[
+    "Forfatter", "Kandidatnr", "Levert dato",
+    "1. utkast", "Tilbakemelding", "Status tilbakemelding",
+    "2. utkast (forbedret)", "2. utkast dato",
+  ]];
+
+  for (const text of texts) {
+    const activeReviews = text.reviews.filter((r) => !r.rejectedAt);
+    if (activeReviews.length === 0) {
+      rows.push([
+        text.author.name, text.author.kandidatnummer,
+        text.createdAt.toLocaleDateString("no-NO"),
+        stripHtml(text.content), "", "",
+        stripHtml(text.revisedContent ?? ""),
+        text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+      ]);
+    } else {
+      for (let i = 0; i < activeReviews.length; i++) {
+        rows.push([
+          i === 0 ? text.author.name : "",
+          i === 0 ? text.author.kandidatnummer : "",
+          i === 0 ? text.createdAt.toLocaleDateString("no-NO") : "",
+          i === 0 ? stripHtml(text.content) : "",
+          stripHtml(activeReviews[i].content),
+          "Godkjent",
+          i === 0 ? stripHtml(text.revisedContent ?? "") : "",
+          i === 0 && text.revisedAt ? text.revisedAt.toLocaleDateString("no-NO") : "",
+        ]);
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths
+  ws["!cols"] = [
+    { wch: 22 }, { wch: 12 }, { wch: 12 },
+    { wch: 50 }, { wch: 50 }, { wch: 18 },
+    { wch: 50 }, { wch: 14 },
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Elevvurdering");
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  const filename = `elevvurdering-${assignment.title.replace(/[^a-zA-Z0-9æøåÆØÅ ]/g, "").replace(/ /g, "-")}.xlsx`;
+  return new NextResponse(buf, {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
