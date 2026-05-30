@@ -44,6 +44,8 @@ export default function AdminAssignmentsPage() {
   const [creating, setCreating] = useState(false);
   const [archiving, setArchiving] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [duplicateGroupId, setDuplicateGroupId] = useState("");
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -127,6 +129,31 @@ export default function AdminAssignmentsPage() {
       setFormError("Noe gikk galt");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleDuplicate(assignmentId: string) {
+    if (!duplicateGroupId) return;
+    setDuplicating(assignmentId);
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId: duplicateGroupId }),
+      });
+      if (res.ok) {
+        const copy = await res.json();
+        setDuplicating(null);
+        setDuplicateGroupId("");
+        router.push(`/admin/assignments/${copy.id}`);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+        setDuplicating(null);
+      }
+    } catch {
+      alert("Noe gikk galt");
+      setDuplicating(null);
     }
   }
 
@@ -437,15 +464,52 @@ export default function AdminAssignmentsPage() {
               )}
             </td>
             <td className="px-4 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-              {!a.isArchived && (
-                <button
-                  onClick={() => handleArchive(a.id)}
-                  disabled={archiving === a.id}
-                  className="text-xs text-gray-400 hover:text-gray-700 font-medium disabled:opacity-50 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
-                >
-                  {archiving === a.id ? "..." : "Arkiver"}
-                </button>
-              )}
+              <div className="flex items-center justify-end gap-1">
+                {duplicating === a.id ? (
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={duplicateGroupId}
+                      onChange={(e) => setDuplicateGroupId(e.target.value)}
+                      className="text-xs border border-gray-300 rounded px-1.5 py-1 bg-white text-gray-700"
+                      autoFocus
+                    >
+                      <option value="">Velg gruppe</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleDuplicate(a.id)}
+                      disabled={!duplicateGroupId}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:opacity-40 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                    >
+                      OK
+                    </button>
+                    <button
+                      onClick={() => { setDuplicating(null); setDuplicateGroupId(""); }}
+                      className="text-xs text-gray-400 hover:text-gray-600 px-1 py-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setDuplicating(a.id); setDuplicateGroupId(a.group.id); }}
+                    className="text-xs text-gray-400 hover:text-gray-700 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    Dupliser
+                  </button>
+                )}
+                {!a.isArchived && duplicating !== a.id && (
+                  <button
+                    onClick={() => handleArchive(a.id)}
+                    disabled={archiving === a.id}
+                    className="text-xs text-gray-400 hover:text-gray-700 font-medium disabled:opacity-50 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    {archiving === a.id ? "..." : "Arkiver"}
+                  </button>
+                )}
+              </div>
             </td>
           </tr>
         );

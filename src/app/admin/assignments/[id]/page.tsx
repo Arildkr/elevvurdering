@@ -101,6 +101,10 @@ export default function AdminAssignmentDetailPage() {
   const [toolsDraft, setToolsDraft] = useState("");
   const [savingTools, setSavingTools] = useState(false);
   const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
+  const [showManualAssign, setShowManualAssign] = useState(false);
+  const [manualReviewerId, setManualReviewerId] = useState("");
+  const [manualTextId, setManualTextId] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [members, setMembers] = useState<{ id: string; name: string; kandidatnummer: string }[]>([]);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
@@ -143,6 +147,29 @@ export default function AdminAssignmentDetailPage() {
       if (mRes.ok) setMembers(await mRes.json());
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleManualAssign() {
+    if (!manualReviewerId || !manualTextId) return;
+    setAssigning(true);
+    try {
+      const res = await fetch(`/api/assignments/${id}/manual-assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviewerId: manualReviewerId, textId: manualTextId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowManualAssign(false);
+        setManualReviewerId("");
+        setManualTextId("");
+        loadData();
+      } else {
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setAssigning(false);
     }
   }
 
@@ -602,6 +629,60 @@ export default function AdminAssignmentDetailPage() {
                 >
                   Pause
                 </button>
+              )}
+            </div>
+
+            {/* Manuell tildeling */}
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <button
+                onClick={() => setShowManualAssign(!showManualAssign)}
+                className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+              >
+                {showManualAssign ? "▲ Skjul nødtildeling" : "▼ Manuell tildeling (nødløsning)"}
+              </button>
+              {showManualAssign && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-xs text-amber-700 font-medium mb-3">
+                    Brukes ved teknisk svikt. Tildeler én elev én tekst utenom automatisk fordeling.
+                  </p>
+                  <div className="flex gap-2 flex-wrap items-end">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Elev (vurderer)</label>
+                      <select
+                        value={manualReviewerId}
+                        onChange={(e) => setManualReviewerId(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700"
+                      >
+                        <option value="">Velg elev</option>
+                        {members.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Tekst som skal vurderes</label>
+                      <select
+                        value={manualTextId}
+                        onChange={(e) => setManualTextId(e.target.value)}
+                        className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700"
+                      >
+                        <option value="">Velg tekst</option>
+                        {texts
+                          .filter((t) => t.author.kandidatnummer !== members.find((m) => m.id === manualReviewerId)?.kandidatnummer)
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>{t.author.name}</option>
+                          ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleManualAssign}
+                      disabled={assigning || !manualReviewerId || !manualTextId}
+                      className="text-sm bg-amber-600 text-white px-4 py-1.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 font-medium"
+                    >
+                      {assigning ? "..." : "Tildel"}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
