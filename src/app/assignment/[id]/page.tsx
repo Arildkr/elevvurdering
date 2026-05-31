@@ -326,7 +326,8 @@ export default function AssignmentDetailPage() {
             </div>
           )}
 
-          {/* Forbedre section */}
+          {/* Forbedre section — hidden during writing phase until feedback is available */}
+          {(assignment.phase !== "writing" || assignment.feedbackAvailable) && (
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-900 mb-2">Forbedre teksten</h2>
             {assignment.feedbackAvailable ? (
@@ -347,6 +348,7 @@ export default function AssignmentDetailPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </main>
     </div>

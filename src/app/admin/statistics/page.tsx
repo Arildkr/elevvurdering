@@ -20,6 +20,7 @@ interface StudentStat {
   textsSubmitted: number;
   reviewsGiven: number;
   reviewsReceived: number;
+  revisionsSubmitted: number;
 }
 
 export default function AdminStatisticsPage() {
@@ -80,10 +81,11 @@ export default function AdminStatisticsPage() {
         const reviewsGiven = reviews.filter((r: { reviewerId: string; rejectedAt: string | null }) => r.reviewerId === m.id && !r.rejectedAt).length;
 
         // Find this student's text, then count reviews on it
-        const studentText = texts.find((t: { authorId: string }) => t.authorId === m.id);
+        const studentText = texts.find((t: { authorId: string; revisedContent?: string | null }) => t.authorId === m.id);
         const reviewsReceived = studentText
           ? reviews.filter((r: { textId: string; rejectedAt: string | null }) => r.textId === studentText.id && !r.rejectedAt).length
           : 0;
+        const revisionsSubmitted = studentText?.revisedContent ? 1 : 0;
 
         return {
           name: m.name,
@@ -92,6 +94,7 @@ export default function AdminStatisticsPage() {
           textsSubmitted,
           reviewsGiven,
           reviewsReceived,
+          revisionsSubmitted,
         };
       });
 
@@ -164,6 +167,7 @@ export default function AdminStatisticsPage() {
                 <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">Tekst levert</th>
                 <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">Vurderinger gitt</th>
                 <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">Vurderinger mottatt</th>
+                <th className="text-center px-6 py-3 text-sm font-medium text-gray-500">2. utkast</th>
               </tr>
             </thead>
             <tbody>
@@ -187,6 +191,13 @@ export default function AdminStatisticsPage() {
                   </td>
                   <td className="px-6 py-4 text-center font-medium">{s.reviewsGiven}</td>
                   <td className="px-6 py-4 text-center font-medium">{s.reviewsReceived}</td>
+                  <td className="px-6 py-4 text-center">
+                    {s.revisionsSubmitted > 0 ? (
+                      <span className="text-green-600">Ja</span>
+                    ) : (
+                      <span className="text-gray-400">Nei</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

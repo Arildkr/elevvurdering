@@ -28,6 +28,7 @@ export default function ForbedreePage() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [forbedreTools, setForbedreTools] = useState<PhaseTools | null>(null);
+  const [requireTeacherFeedback, setRequireTeacherFeedback] = useState(false);
   const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function ForbedreePage() {
       if (assignRes.ok) {
         const a = await assignRes.json();
         setForbedreTools(parseToolsConfig(a.toolsConfig).feedback);
+        setRequireTeacherFeedback(!!a.requireTeacherFeedback);
       }
 
       if (textRes.ok) {
@@ -180,7 +182,7 @@ export default function ForbedreePage() {
                         <span className="text-sm font-semibold text-purple-800">Fra læreren</span>
                         <span className="text-xs text-gray-400">{new Date(f.createdAt).toLocaleString("no-NO")}</span>
                       </div>
-                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">{f.content}</p>
+                      <RichTextViewer content={f.content} />
                     </div>
                   ))}
                   {feedback.map((f, i) => (
@@ -197,7 +199,13 @@ export default function ForbedreePage() {
             )}
 
             {/* ── Rediger teksten ── */}
-            <section>
+            {requireTeacherFeedback && teacherFeedback.length === 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                <p className="text-sm font-medium text-amber-900 mb-1">Venter på lærertilbakemelding</p>
+                <p className="text-sm text-amber-700">Du kan begynne å skrive 2. utkast når læreren din har gitt deg tilbakemelding.</p>
+              </div>
+            )}
+            <section className={requireTeacherFeedback && teacherFeedback.length === 0 ? "opacity-40 pointer-events-none select-none" : ""}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-800">Teksten din</h2>
                 {revisedAt && (

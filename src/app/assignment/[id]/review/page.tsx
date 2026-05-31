@@ -262,8 +262,8 @@ export default function ReviewPage() {
               />
             </div>
             <div className="flex justify-between items-center mb-4">
-              <p className={`text-sm ${charCount < 10 ? "text-amber-600" : "text-gray-500"}`}>
-                {charCount} / minimum 10 tegn
+              <p className={`text-sm ${charCount < 50 ? "text-amber-600" : "text-gray-500"}`}>
+                {charCount} / minimum 50 tegn
               </p>
               <p className="text-xs text-gray-400">Lagres lokalt automatisk</p>
             </div>
@@ -276,7 +276,7 @@ export default function ReviewPage() {
 
             <button
               type="submit"
-              disabled={submitting || charCount < 10}
+              disabled={submitting || charCount < 50}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "Sender..." : "Send vurdering"}

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseToolsConfig } from "@/lib/tools-config";
+import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 
 interface AssignmentDetail {
   id: string;
@@ -114,6 +115,19 @@ export default function AdminAssignmentDetailPage() {
   const [members, setMembers] = useState<{ id: string; name: string; kandidatnummer: string }[]>([]);
   const assignmentRef = useRef<AssignmentDetail | null>(null);
 
+  // Toast + confirm dialog
+  const [toast, setToast] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; action: () => void } | null>(null);
+
+  function showToast(type: "ok" | "error", text: string) {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function askConfirm(message: string, action: () => void) {
+    setConfirmDialog({ message, action });
+  }
+
   useEffect(() => {
     assignmentRef.current = assignment;
   }, [assignment]);
@@ -171,28 +185,29 @@ export default function AdminAssignmentDetailPage() {
         setManualTextId("");
         loadData();
       } else {
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setAssigning(false);
     }
   }
 
-  async function handleDistribute() {
-    if (!confirm("Er du sikker? Dette tildeler hver elev en tekst å vurdere.")) return;
-    setDistributing(true);
-    try {
-      const res = await fetch(`/api/assignments/${id}/distribute`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        loadData();
-      } else {
-        alert(data.error || "Noe gikk galt");
+  function handleDistribute() {
+    askConfirm("Er du sikker? Dette tildeler hver elev en tekst å vurdere.", async () => {
+      setDistributing(true);
+      try {
+        const res = await fetch(`/api/assignments/${id}/distribute`, { method: "POST" });
+        const data = await res.json();
+        if (res.ok) {
+          showToast("ok", data.message || "Tekster tildelt");
+          loadData();
+        } else {
+          showToast("error", data.error || "Noe gikk galt");
+        }
+      } finally {
+        setDistributing(false);
       }
-    } finally {
-      setDistributing(false);
-    }
+    });
   }
 
   async function handleToggleFeedback() {
@@ -203,7 +218,7 @@ export default function AdminAssignmentDetailPage() {
         loadData();
       } else {
         const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setTogglingFeedback(false);
@@ -241,7 +256,7 @@ export default function AdminAssignmentDetailPage() {
       setShowTimerControls(false);
     } else {
       const data = await res.json();
-      alert(data.error || "Noe gikk galt");
+      showToast("error", data.error || "Noe gikk galt");
     }
   }
 
@@ -253,26 +268,28 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
-  async function handleReject(reviewId: string) {
-    if (!confirm("Underkjenne denne tilbakemeldingen? Eleven må skrive en ny.")) return;
-    const res = await fetch(`/api/reviews/${reviewId}/reject`, { method: "PATCH" });
-    if (res.ok) {
-      loadData();
-    } else {
-      const data = await res.json();
-      alert(data.error || "Noe gikk galt");
-    }
+  function handleReject(reviewId: string) {
+    askConfirm("Underkjenne denne tilbakemeldingen? Eleven må skrive en ny.", async () => {
+      const res = await fetch(`/api/reviews/${reviewId}/reject`, { method: "PATCH" });
+      if (res.ok) {
+        loadData();
+      } else {
+        const data = await res.json();
+        showToast("error", data.error || "Noe gikk galt");
+      }
+    });
   }
 
-  async function handleDeleteReview(reviewId: string) {
-    if (!confirm("Slette denne tilbakemeldingen permanent? Eleven må skrive en ny.")) return;
-    const res = await fetch(`/api/reviews/${reviewId}`, { method: "DELETE" });
-    if (res.ok) {
-      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
-    } else {
-      const data = await res.json();
-      alert(data.error || "Noe gikk galt");
-    }
+  function handleDeleteReview(reviewId: string) {
+    askConfirm("Slette denne tilbakemeldingen permanent? Eleven må skrive en ny.", async () => {
+      const res = await fetch(`/api/reviews/${reviewId}`, { method: "DELETE" });
+      if (res.ok) {
+        setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      } else {
+        const data = await res.json();
+        showToast("error", data.error || "Noe gikk galt");
+      }
+    });
   }
 
   async function handleAddTeacherFeedback(textId: string) {
@@ -291,22 +308,23 @@ export default function AdminAssignmentDetailPage() {
         setAddingFeedbackTo(null);
       } else {
         const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setSavingFeedback(false);
     }
   }
 
-  async function handleDeleteTeacherFeedback(feedbackId: string) {
-    if (!confirm("Slette denne lærertilbakemeldingen?")) return;
-    const res = await fetch(`/api/teacher-feedback/${feedbackId}`, { method: "DELETE" });
-    if (res.ok) {
-      setTeacherFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
-    } else {
-      const data = await res.json();
-      alert(data.error || "Noe gikk galt");
-    }
+  function handleDeleteTeacherFeedback(feedbackId: string) {
+    askConfirm("Slette denne lærertilbakemeldingen?", async () => {
+      const res = await fetch(`/api/teacher-feedback/${feedbackId}`, { method: "DELETE" });
+      if (res.ok) {
+        setTeacherFeedbacks((prev) => prev.filter((f) => f.id !== feedbackId));
+      } else {
+        const data = await res.json();
+        showToast("error", data.error || "Noe gikk galt");
+      }
+    });
   }
 
   async function handleSaveTaskText() {
@@ -322,7 +340,7 @@ export default function AdminAssignmentDetailPage() {
         setEditingTaskText(false);
       } else {
         const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setSavingTaskText(false);
@@ -342,29 +360,30 @@ export default function AdminAssignmentDetailPage() {
         setEditingTools(false);
       } else {
         const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setSavingTools(false);
     }
   }
 
-  async function handleDelete() {
-    if (!confirm("Er du sikker på at du vil slette denne oppgaven? Alle tekster og vurderinger slettes permanent.")) return;
-    try {
-      const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        router.push("/admin/assignments");
-      } else {
-        const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+  function handleDelete() {
+    askConfirm("Er du sikker? Alle tekster og vurderinger slettes permanent.", async () => {
+      try {
+        const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          router.push("/admin/assignments");
+        } else {
+          const data = await res.json();
+          showToast("error", data.error || "Noe gikk galt");
+        }
+      } catch {
+        showToast("error", "Noe gikk galt");
       }
-    } catch {
-      alert("Noe gikk galt");
-    }
+    });
   }
 
-  async function handlePhaseChange(phase: "writing" | "review" | "closed" | "paused" | "resumed" | "archived") {
+  function handlePhaseChange(phase: "writing" | "review" | "closed" | "paused" | "resumed" | "archived") {
     const labels: Record<string, string> = {
       writing: "skrivefase",
       review: "responsfase",
@@ -373,27 +392,27 @@ export default function AdminAssignmentDetailPage() {
       resumed: "gjenopptatt",
       archived: "arkivert",
     };
-    if (phase === "archived") {
-      if (!confirm("Arkivere oppgaven? Den vil ikke lenger vises for elever.")) return;
-    } else if (!confirm(`Bytte til ${labels[phase]}?`)) {
-      return;
-    }
-    setChangingPhase(true);
-    try {
-      const res = await fetch(`/api/assignments/${id}/phase`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase }),
-      });
-      if (res.ok) {
-        loadData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+    const message = phase === "archived"
+      ? "Arkivere oppgaven? Den vil ikke lenger vises for elever."
+      : `Bytte til ${labels[phase]}?`;
+    askConfirm(message, async () => {
+      setChangingPhase(true);
+      try {
+        const res = await fetch(`/api/assignments/${id}/phase`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phase }),
+        });
+        if (res.ok) {
+          loadData();
+        } else {
+          const data = await res.json();
+          showToast("error", data.error || "Noe gikk galt");
+        }
+      } finally {
+        setChangingPhase(false);
       }
-    } finally {
-      setChangingPhase(false);
-    }
+    });
   }
 
   async function handleUnlockFeedback(textId: string, unlock: boolean) {
@@ -410,7 +429,7 @@ export default function AdminAssignmentDetailPage() {
         );
       } else {
         const data = await res.json();
-        alert(data.error || "Noe gikk galt");
+        showToast("error", data.error || "Noe gikk galt");
       }
     } finally {
       setUnlockingFeedback(null);
@@ -1040,7 +1059,9 @@ export default function AdminAssignmentDetailPage() {
                       <p className="text-xs font-medium text-gray-500 mb-2">Lærertilbakemeldinger</p>
                       {teacherFeedbacks.filter((f) => f.textId === t.id).map((f) => (
                         <div key={f.id} className="bg-purple-50 border border-purple-100 rounded-lg px-4 py-3 mb-2 flex items-start justify-between gap-3">
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap flex-1">{f.content}</p>
+                          <div className="flex-1 text-sm">
+                            <RichTextViewer content={f.content} />
+                          </div>
                           <button
                             onClick={() => handleDeleteTeacherFeedback(f.id)}
                             className="text-xs text-red-500 hover:text-red-700 font-medium shrink-0"
@@ -1051,14 +1072,14 @@ export default function AdminAssignmentDetailPage() {
                       ))}
                       {addingFeedbackTo === t.id ? (
                         <div className="mt-2 space-y-2">
-                          <textarea
-                            value={feedbackDraft}
-                            onChange={(e) => setFeedbackDraft(e.target.value)}
-                            placeholder="Skriv tilbakemelding til eleven..."
-                            rows={4}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
-                            autoFocus
-                          />
+                          <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-purple-500">
+                            <RichTextEditor
+                              content={feedbackDraft}
+                              onChange={setFeedbackDraft}
+                              placeholder="Skriv tilbakemelding til eleven..."
+                              minHeight="120px"
+                            />
+                          </div>
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleAddTeacherFeedback(t.id)}
@@ -1472,6 +1493,42 @@ export default function AdminAssignmentDetailPage() {
         </div>
       )}
 
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.type === "ok" ? "bg-green-700 text-white" : "bg-red-700 text-white"
+        }`}>
+          {toast.type === "ok" ? (
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3.5 3.5L13 4"/></svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          )}
+          {toast.text}
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <p className="text-gray-900 font-medium mb-5">{confirmDialog.message}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={() => { const fn = confirmDialog.action; setConfirmDialog(null); fn(); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+              >
+                Bekreft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
