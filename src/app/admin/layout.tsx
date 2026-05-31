@@ -162,15 +162,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
             <button
               onClick={() => tourRef.current?.startTour()}
-              title="Vis meg rundt"
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-amber-400 transition-colors"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="8" cy="8" r="6.5"/>
                 <path d="M8 11v-1"/>
                 <path d="M8 5a1.5 1.5 0 0 1 1.5 1.5c0 1-1.5 1.5-1.5 2.5"/>
               </svg>
-              Tur
+              Hjelp &amp; veiledning
             </button>
           </div>
         </div>

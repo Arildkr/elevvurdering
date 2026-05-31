@@ -18,86 +18,111 @@ function navigateTo(page: PageKey) {
   window.location.href = `/admin/${page}`;
 }
 
-function buildGroupsSteps() {
-  return [
-    {
-      element: "#tour-groups-header",
-      popover: {
-        title: "Gruppeadministrasjon",
-        description:
-          "Her ser du alle klassene dine. Klikk «Detaljer» på en gruppe for å se elevliste, deltakerkode og tilgang for medlærere.",
-        side: "bottom" as const,
-      },
+const GROUPS_STEPS: DriveStep[] = [
+  {
+    element: "#tour-groups-header",
+    popover: {
+      title: "Dine klasser",
+      description:
+        "Her ser du alle klassene dine med antall elever og oppgaver. Klikk «Detaljer» på en gruppe for å se elevlisten, deltakerkoden og tilganger. Deltakerkoden vises der — elevene skriver den inn på registreringssiden én gang.",
+      side: "bottom",
     },
-    {
-      element: "#tour-create-group",
-      popover: {
-        title: "Opprett gruppe",
-        description:
-          "Klikk her for å opprette en ny klasse. Etter opprettelsen får du en deltakerkode som elevene bruker når de registrerer seg.",
-        side: "left" as const,
-      },
-      onNextClick: () => navigateTo("assignments"),
+  },
+  {
+    element: "#tour-create-group",
+    popover: {
+      title: "Opprett gruppe",
+      description:
+        "Gi gruppen et navn (f.eks. «10A Norsk»), klikk «Opprett» og du får en 6-tegns deltakerkode. Del koden med klassen — via Classroom, Feide eller på tavla. Elevene trenger ingen app, bare en nettleser og koden.",
+      side: "left",
     },
-  ];
-}
+  },
+];
 
-function buildAssignmentsSteps() {
-  return [
-    {
-      element: "#tour-assignments-header",
-      popover: {
-        title: "Skriveoppgaver",
-        description:
-          "Her administrerer du alle skriveoppgavene dine. Klikk på en oppgave for å se innsendte tekster, justere frister og styre fasene.",
-        side: "bottom" as const,
-      },
+const ASSIGNMENTS_STEPS: DriveStep[] = [
+  {
+    element: "#tour-assignments-header",
+    popover: {
+      title: "Skriveoppgaver — fire faser",
+      description:
+        "<b>📝 Skriving</b> — Elevene leverer teksten sin med valgfrie hjelpemidler (stavekontroll, lesehjelp, AI-analyse).<br><br>" +
+        "<b>💬 Respons</b> — Elevene vurderer hverandres tekster anonymt etter et responsskjema du definerer.<br><br>" +
+        "<b>⭐ Tilbakemelding</b> — Du gir lærertilbakemelding direkte i systemet.<br><br>" +
+        "Klikk på en oppgave i listen for å styre fasene og se innleverte tekster.",
+      side: "bottom",
     },
-    {
-      element: "#tour-create-assignment",
-      popover: {
-        title: "Ny oppgave",
-        description:
-          "Klikk her for å opprette en ny skriveoppgave. Du kan velge mellom ordinær oppgave (med elevrespons) og øvingsoppgave (kun lærertilbakemelding).",
-        side: "left" as const,
-      },
-      onNextClick: () => navigateTo("teachers"),
+  },
+  {
+    element: "#tour-create-assignment",
+    popover: {
+      title: "To typer oppgaver",
+      description:
+        "<b>Ordinær oppgave:</b> Elevene skriver → vurderer hverandres tekster anonymt → får lærertilbakemelding. Du styrer frister og faser selv.<br><br>" +
+        "<b>Øvingsoppgave:</b> Ingen elevrespons — kun lærertilbakemelding. Du velger mellom oppgavetekster fra tidligere norskeksamen. Passer til eksamensforberedelse.",
+      side: "left",
     },
-  ];
-}
+  },
+];
 
-function buildTeachersSteps() {
-  return [
-    {
-      element: "#tour-teachers-header",
-      popover: {
-        title: "Medlærere",
-        description:
-          "Her ser du alle lærere som har tilgang til systemet — deg selv og eventuelle medlærere du har invitert.",
-        side: "bottom" as const,
-      },
+const TEACHERS_STEPS: DriveStep[] = [
+  {
+    element: "#tour-teachers-header",
+    popover: {
+      title: "Medlærere",
+      description:
+        "Her ser du alle som har lærertilgang i systemet. Medlærere kan lese alle elevtekstene i gruppen og gi lærertilbakemelding — men kan ikke endre oppgaveinnstillinger eller administrere gruppen.",
+      side: "bottom",
     },
-    {
-      element: "#tour-invite-teacher",
-      popover: {
-        title: "Inviter medlærer",
-        description:
-          "Send en e-postinvitasjon til en kollega. De oppretter kontoen sin selv via lenken i e-posten og kobles automatisk til gruppen du velger.",
-        side: "left" as const,
-      },
+  },
+  {
+    element: "#tour-invite-teacher",
+    popover: {
+      title: "Inviter kollega",
+      description:
+        "Skriv inn e-postadressen og velg gruppe. Kollegaen mottar en e-post med en personlig lenke, oppretter kontoen sin og kobles automatisk til gruppen — du trenger ikke gjøre noe mer.<br><br>✅ <b>Du er nå klar til å ta Elevvurdering i bruk!</b>",
+      side: "left",
     },
-  ];
-}
+  },
+];
+
+const INITIAL_STEPS: DriveStep[] = [
+  {
+    popover: {
+      title: "Velkommen til Elevvurdering",
+      description:
+        "Elevvurdering er laget for norsklærere som vil organisere skriveoppgaver med elevrespons og lærertilbakemelding. Denne gjennomgangen tar deg gjennom de viktigste funksjonene.",
+    },
+  },
+  {
+    element: "#tour-nav",
+    popover: {
+      title: "Navigasjon",
+      description:
+        "Alt du trenger finner du i sidemenyen. Vi skal gå gjennom <b>Grupper</b>, <b>Oppgaver</b> og <b>Lærere</b> — de tre hovedelementene.",
+      side: "right",
+    },
+  },
+  {
+    element: "#tour-nav-groups",
+    popover: {
+      title: "Steg 1 – Grupper",
+      description:
+        "Grupper er klassene dine i systemet — opprett én gruppe per klasse. Elevene melder seg inn med en unik deltakerkode du deler med dem. Ingen app eller installasjon trengs. Klikk «Neste» for å gå til gruppesiden.",
+      side: "right",
+    },
+  },
+];
 
 async function launchPageTour(
   steps: DriveStep[],
-  showProgress = false,
-  progressText = ""
+  progressText: string,
+  nextPage?: PageKey
 ) {
   const { driver } = await import("driver.js");
+  const lastIndex = steps.length - 1;
 
   const d = driver({
-    showProgress,
+    showProgress: true,
     progressText,
     allowClose: true,
     animate: true,
@@ -105,10 +130,19 @@ async function launchPageTour(
     overlayOpacity: 0.5,
     nextBtnText: "Neste →",
     prevBtnText: "← Forrige",
-    doneBtnText: "Ferdig",
+    doneBtnText: nextPage ? "Neste side →" : "Ferdig",
     steps,
+    onNextClick: nextPage
+      ? (_el, _step, opts) => {
+          if (opts.driver.getActiveIndex() === lastIndex) {
+            opts.driver.destroy();
+            navigateTo(nextPage);
+          } else {
+            opts.driver.moveNext();
+          }
+        }
+      : undefined,
     onDestroyStarted: () => {
-      sessionStorage.removeItem(RESUME_KEY);
       d.destroy();
     },
   });
@@ -119,50 +153,24 @@ async function launchPageTour(
 async function startFullTour() {
   const { driver } = await import("driver.js");
 
-  const initialSteps = [
-    {
-      popover: {
-        title: "Velkommen til lærerpanelet!",
-        description:
-          "La oss ta en rask gjennomgang av de viktigste funksjonene. Klikk «Neste» for å fortsette.",
-      },
-    },
-    {
-      element: "#tour-nav",
-      popover: {
-        title: "Navigasjon",
-        description:
-          "Sidemenyen gir deg tilgang til alle hoveddeler: Grupper, Oppgaver, Statistikk og Lærere.",
-        side: "right" as const,
-      },
-    },
-    {
-      element: "#tour-nav-groups",
-      popover: {
-        title: "Grupper",
-        description:
-          "Start med å opprette grupper — én gruppe per klasse. Elevene melder seg inn med en deltakerkode. Klikk «Neste» for å se gruppesiden.",
-        side: "right" as const,
-      },
-      onNextClick: () => {
-        d.destroy();
-        navigateTo("groups");
-      },
-    },
-  ];
-
   const d = driver({
-    showProgress: false,
     allowClose: true,
     animate: true,
     overlayColor: "rgb(0,0,0)",
     overlayOpacity: 0.5,
     nextBtnText: "Neste →",
     prevBtnText: "← Forrige",
-    doneBtnText: "Avslutt",
-    steps: initialSteps,
+    doneBtnText: "Neste side →",
+    steps: INITIAL_STEPS,
+    onNextClick: (_el, _step, opts) => {
+      if (opts.driver.getActiveIndex() === INITIAL_STEPS.length - 1) {
+        opts.driver.destroy();
+        navigateTo("groups");
+      } else {
+        opts.driver.moveNext();
+      }
+    },
     onDestroyStarted: () => {
-      sessionStorage.removeItem(RESUME_KEY);
       d.destroy();
     },
   });
@@ -175,28 +183,22 @@ const AdminTour = forwardRef<AdminTourHandle>((_, ref) => {
   const didAutoStart = useRef(false);
 
   useImperativeHandle(ref, () => ({
-    startTour: () => {
-      startFullTour();
-    },
+    startTour: () => startFullTour(),
   }));
 
   useEffect(() => {
     if (didAutoStart.current) return;
     const resume = sessionStorage.getItem(RESUME_KEY);
     if (!resume) return;
+    sessionStorage.removeItem(RESUME_KEY);
+    didAutoStart.current = true;
 
     if (resume === "groups" && pathname === "/admin/groups") {
-      didAutoStart.current = true;
-      sessionStorage.removeItem(RESUME_KEY);
-      setTimeout(() => launchPageTour(buildGroupsSteps(), true, "Tur {{current}} av {{total}}"), 400);
+      setTimeout(() => launchPageTour(GROUPS_STEPS, "Del {{current}} av {{total}}", "assignments"), 400);
     } else if (resume === "assignments" && pathname === "/admin/assignments") {
-      didAutoStart.current = true;
-      sessionStorage.removeItem(RESUME_KEY);
-      setTimeout(() => launchPageTour(buildAssignmentsSteps(), true, "Tur {{current}} av {{total}}"), 400);
+      setTimeout(() => launchPageTour(ASSIGNMENTS_STEPS, "Del {{current}} av {{total}}", "teachers"), 400);
     } else if (resume === "teachers" && pathname === "/admin/teachers") {
-      didAutoStart.current = true;
-      sessionStorage.removeItem(RESUME_KEY);
-      setTimeout(() => launchPageTour(buildTeachersSteps(), true, "Tur {{current}} av {{total}}"), 400);
+      setTimeout(() => launchPageTour(TEACHERS_STEPS, "Del {{current}} av {{total}}"), 400);
     }
   }, [pathname]);
 
