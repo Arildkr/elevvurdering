@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
         taskOption1: parsed.data.taskOption1 ?? null,
         taskOption2: parsed.data.taskOption2 ?? null,
         exerciseLanguage: parsed.data.exerciseLanguage ?? null,
+        exerciseLanguage2: parsed.data.exerciseLanguage2 ?? null,
         requireTeacherFeedback: parsed.data.requireTeacherFeedback ?? false,
       },
     });

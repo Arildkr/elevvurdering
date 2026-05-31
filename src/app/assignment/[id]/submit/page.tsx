@@ -140,17 +140,17 @@ export default function SubmitTextPage() {
     localStorage.setItem(`draft_${id}`, content);
   }, [id, content]);
 
-  // Warn when leaving with unsaved changes
+  // Warn when leaving — always active while writing (not just before first autosave)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (content && lastSavedTime === null && content.length > 0) {
+      if (canEdit && content.length >= 50) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [content, lastSavedTime]);
+  }, [content, canEdit]);
 
   // Track window/tab switches — 1s warmup avoids false positive on page load
   useEffect(() => {

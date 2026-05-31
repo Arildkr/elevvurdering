@@ -47,6 +47,18 @@ export default function PracticePage() {
     localStorage.setItem(DRAFT_KEY, content);
   }, [content]);
 
+  // Warn before leaving if there's content
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (content.length >= 50) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [content]);
+
   // Persist task on change
   useEffect(() => {
     if (taskText) localStorage.setItem(TASK_KEY, taskText);

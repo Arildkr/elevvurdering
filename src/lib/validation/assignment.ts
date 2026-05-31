@@ -14,6 +14,7 @@ export const createAssignmentSchema = z
     taskOption1: z.string().max(2000).optional(),
     taskOption2: z.string().max(2000).optional(),
     exerciseLanguage: z.enum(["bokmål", "nynorsk"]).optional(),
+    exerciseLanguage2: z.enum(["bokmål", "nynorsk"]).optional(),
     requireTeacherFeedback: z.boolean().optional(),
   })
   .refine(
@@ -41,5 +42,6 @@ export const updateAssignmentSchema = z.object({
   taskOption1: z.string().max(2000).nullable().optional(),
   taskOption2: z.string().max(2000).nullable().optional(),
   exerciseLanguage: z.enum(["bokmål", "nynorsk"]).nullable().optional(),
+  exerciseLanguage2: z.enum(["bokmål", "nynorsk"]).nullable().optional(),
   requireTeacherFeedback: z.boolean().optional(),
 });

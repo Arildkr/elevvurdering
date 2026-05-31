@@ -111,6 +111,7 @@ export async function GET(
       taskOption1: assignment.taskOption1 ?? null,
       taskOption2: assignment.taskOption2 ?? null,
       exerciseLanguage: assignment.exerciseLanguage ?? null,
+      exerciseLanguage2: assignment.exerciseLanguage2 ?? null,
       requireTeacherFeedback: assignment.requireTeacherFeedback,
     });
   } catch (error) {

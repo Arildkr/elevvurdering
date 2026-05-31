@@ -73,7 +73,8 @@ model Assignment {
   isExercise              Boolean   @default(false)
   taskOption1             String?   // Skjønnlitterær oppgave (øving)
   taskOption2             String?   // Sakprosa-oppgave (øving)
-  exerciseLanguage        String?   // "bokmål" | "nynorsk"
+  exerciseLanguage        String?   // "bokmål" | "nynorsk" — for taskOption1
+  exerciseLanguage2       String?   // "bokmål" | "nynorsk" — for taskOption2
   requireTeacherFeedback  Boolean   @default(false)
   createdAt               DateTime  @default(now())
 

@@ -179,8 +179,9 @@ export default function AdminAssignmentsPage() {
   // Exercise fields
   const [isExercise, setIsExercise] = useState(false);
   const [exerciseLanguage, setExerciseLanguage] = useState<ExamLanguage>("bokmål");
+  const [exerciseLanguage2, setExerciseLanguage2] = useState<ExamLanguage>("bokmål");
   const [taskOption1, setTaskOption1] = useState("");
-  const [taskOption2, setTaskOption2] = useState("")
+  const [taskOption2, setTaskOption2] = useState("");
   const [requireTeacherFeedback, setRequireTeacherFeedback] = useState(false);
 
   function updatePhaseTool<K extends keyof PhaseTools>(
@@ -234,6 +235,7 @@ export default function AdminAssignmentsPage() {
           taskOption1: isExercise && taskOption1 ? taskOption1 : undefined,
           taskOption2: isExercise && taskOption2 ? taskOption2 : undefined,
           exerciseLanguage: isExercise ? exerciseLanguage : undefined,
+          exerciseLanguage2: isExercise ? exerciseLanguage2 : undefined,
           requireTeacherFeedback: isExercise ? requireTeacherFeedback : undefined,
         }),
       });
@@ -479,13 +481,34 @@ export default function AdminAssignmentsPage() {
                   label="Oppgavealternativ 1 (valgfritt)"
                 />
 
-                {/* Task option 2 */}
-                <TaskPicker
-                  language={exerciseLanguage}
-                  value={taskOption2}
-                  onChange={setTaskOption2}
-                  label="Oppgavealternativ 2 (valgfritt)"
-                />
+                {/* Task option 2 — own language */}
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-medium text-gray-700">Målform alt. 2</span>
+                    <div className="flex gap-1">
+                      {(["bokmål", "nynorsk"] as ExamLanguage[]).map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => { setExerciseLanguage2(lang); setTaskOption2(""); }}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                            exerciseLanguage2 === lang
+                              ? "bg-indigo-600 text-white"
+                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          }`}
+                        >
+                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <TaskPicker
+                    language={exerciseLanguage2}
+                    value={taskOption2}
+                    onChange={setTaskOption2}
+                    label="Oppgavealternativ 2 (valgfritt)"
+                  />
+                </div>
 
                 {/* requireTeacherFeedback */}
                 <label className="flex items-center gap-3 cursor-pointer">
