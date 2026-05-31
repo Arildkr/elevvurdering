@@ -201,7 +201,17 @@ const AdminTour = forwardRef<AdminTourHandle>((_, ref) => {
   const didAutoStart = useRef(false);
 
   useImperativeHandle(ref, () => ({
-    startTour: () => startFullTour(),
+    startTour: () => {
+      if (pathname === "/admin/groups") {
+        launchPageTour(GROUPS_STEPS, "Del {{current}} av {{total}}", "assignments");
+      } else if (pathname === "/admin/assignments") {
+        launchPageTour(ASSIGNMENTS_STEPS, "Del {{current}} av {{total}}", "teachers");
+      } else if (pathname === "/admin/teachers") {
+        launchPageTour(TEACHERS_STEPS, "Del {{current}} av {{total}}");
+      } else {
+        startFullTour();
+      }
+    },
   }));
 
   useEffect(() => {
