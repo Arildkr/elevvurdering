@@ -119,13 +119,14 @@ export default function InvitePage() {
             ) : (
               <div className="space-y-3">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
-                  Logg inn med <strong>{invite.email}</strong> for å godta invitasjonen.
+                  Logg inn eller opprett lærerkonto med e-postadressen <strong>{invite.email}</strong>.
+                  Du blir automatisk lagt til i gruppen.
                 </div>
                 <a
-                  href={`/login?returnUrl=/invite/${token}`}
+                  href={`/teacher-register?returnUrl=/invite/${token}&email=${encodeURIComponent(invite.email)}`}
                   className="block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
                 >
-                  Logg inn
+                  Logg inn / opprett konto
                 </a>
               </div>
             )}

@@ -1,20 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type Step = "form" | "code" | "done";
 
 export default function TeacherRegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl");
+  const emailParam = searchParams.get("email");
+
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(emailParam ?? "");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ kandidatnummer: string; isNewAccount: boolean } | null>(null);
+
+  useEffect(() => {
+    if (emailParam) setEmail(emailParam);
+  }, [emailParam]);
 
   async function handleRequestCode(e: React.FormEvent) {
     e.preventDefault();
@@ -70,17 +78,25 @@ export default function TeacherRegisterPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {result.isNewAccount ? "Lærerkonto opprettet!" : "Innlogget!"}
             </h1>
-            <p className="text-gray-500 mb-6">
-              {result.isNewAccount
-                ? "Ditt kandidatnummer er:"
-                : "Du er nå logget inn. Kandidatnummeret ditt er:"}
-            </p>
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-              <p className="text-4xl font-mono font-bold text-blue-700 tracking-[0.3em]">
-                {result.kandidatnummer}
+            {returnUrl ? (
+              <p className="text-gray-600 mb-6">
+                Du er nå lagt til i gruppen og kan se den i admin-panelet.
               </p>
-            </div>
-            {result.isNewAccount && (
+            ) : (
+              <p className="text-gray-500 mb-6">
+                {result.isNewAccount
+                  ? "Ditt kandidatnummer er:"
+                  : "Du er nå logget inn. Kandidatnummeret ditt er:"}
+              </p>
+            )}
+            {!returnUrl && (
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+                <p className="text-4xl font-mono font-bold text-blue-700 tracking-[0.3em]">
+                  {result.kandidatnummer}
+                </p>
+              </div>
+            )}
+            {result.isNewAccount && !returnUrl && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
                 <p className="text-sm text-amber-800 font-medium mb-1">Viktig!</p>
                 <p className="text-sm text-amber-700">
@@ -189,7 +205,7 @@ export default function TeacherRegisterPage() {
                 placeholder="Ola Nordmann"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                 required
-                autoFocus
+                autoFocus={!emailParam}
               />
             </div>
             <div>
@@ -204,6 +220,7 @@ export default function TeacherRegisterPage() {
                 placeholder="ola@skole.no"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-400"
                 required
+                readOnly={!!emailParam}
               />
             </div>
             {error && (

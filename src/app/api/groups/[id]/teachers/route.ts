@@ -102,9 +102,15 @@ export async function POST(
                style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:15px">
               Godta invitasjon
             </a>
-            <p style="margin:24px 0 0;color:#888;font-size:13px">
-              Lenken er gyldig i 7 dager. Logg inn med e-postadressen ${email}.
-            </p>
+            <div style="margin:24px 0 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px">
+              <p style="margin:0 0 8px;font-size:13px;color:#374151;font-weight:600">Slik fungerer det:</p>
+              <ol style="margin:0;padding-left:20px;color:#6b7280;font-size:13px;line-height:1.7">
+                <li>Klikk på knappen over</li>
+                <li>Logg inn med e-postadressen <strong>${email}</strong> (ny konto opprettes automatisk om du ikke har en)</li>
+                <li>Du legges automatisk til i gruppen</li>
+              </ol>
+            </div>
+            <p style="margin:16px 0 0;color:#9ca3af;font-size:12px">Lenken er gyldig i 7 dager.</p>
           </div>
         `,
       }).catch((err) => console.error("Invite email error:", err));
