@@ -143,7 +143,7 @@ export default function SubmitTextPage() {
   // Warn when leaving — always active while writing (not just before first autosave)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (canEdit && content.length >= 50) {
+      if (canEdit && content.length > 0) {
         e.preventDefault();
         e.returnValue = "";
       }

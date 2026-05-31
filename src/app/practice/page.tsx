@@ -50,7 +50,7 @@ export default function PracticePage() {
   // Warn before leaving if there's content
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (content.length >= 50) {
+      if (content.length > 0) {
         e.preventDefault();
         e.returnValue = "";
       }
