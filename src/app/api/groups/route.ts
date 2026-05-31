@@ -9,7 +9,12 @@ export async function GET() {
     const admin = await requireAdmin();
 
     const groups = await prisma.group.findMany({
-      where: { adminId: admin.id },
+      where: {
+        OR: [
+          { adminId: admin.id },
+          { groupTeachers: { some: { userId: admin.id } } },
+        ],
+      },
       include: {
         _count: { select: { members: true, assignments: true } },
       },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateSession, requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 import { getAssignmentPhase } from "@/lib/phase";
 import { updateAssignmentSchema } from "@/lib/validation/assignment";
 
@@ -44,8 +45,7 @@ export async function GET(
     const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
 
     if (user.isAdmin) {
-      // Verify this admin owns this group
-      if (assignment.group.adminId !== user.id) {
+      if (!await canAccessGroup(assignment.groupId, user.id)) {
         return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
       }
 
@@ -107,6 +107,11 @@ export async function GET(
       groupName: assignment.group.name,
       phase,
       toolsConfig: assignment.toolsConfig ?? null,
+      isExercise: assignment.isExercise,
+      taskOption1: assignment.taskOption1 ?? null,
+      taskOption2: assignment.taskOption2 ?? null,
+      exerciseLanguage: assignment.exerciseLanguage ?? null,
+      requireTeacherFeedback: assignment.requireTeacherFeedback,
     });
   } catch (error) {
     console.error("Assignment GET error:", error);
@@ -122,12 +127,8 @@ export async function PUT(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    // Verify ownership
-    const existing = await prisma.assignment.findUnique({
-      where: { id },
-      include: { group: { select: { adminId: true } } },
-    });
-    if (!existing || existing.group.adminId !== admin.id) {
+    const existing = await prisma.assignment.findUnique({ where: { id }, select: { groupId: true } });
+    if (!existing || !await canAccessGroup(existing.groupId, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 

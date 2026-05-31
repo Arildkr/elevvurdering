@@ -1,30 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { canAccessGroup } from "@/lib/group-access";
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
     const admin = await requireAdmin();
-    const { id } = await params;
+    const { id, userId } = await params;
 
-    const feedback = await prisma.teacherFeedback.findUnique({
-      where: { id },
-      include: { assignment: { select: { groupId: true } } },
-    });
-
-    if (!feedback) {
-      return NextResponse.json({ error: "Tilbakemelding ikke funnet" }, { status: 404 });
-    }
-
-    if (!await canAccessGroup(feedback.assignment.groupId, admin.id)) {
+    // Owner-only
+    const group = await prisma.group.findUnique({ where: { id } });
+    if (!group || group.adminId !== admin.id) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
-    await prisma.teacherFeedback.delete({ where: { id } });
+    // userId may refer to a GroupTeacher.userId OR a GroupTeacherInvite.id
+    await Promise.all([
+      prisma.groupTeacher.deleteMany({ where: { groupId: id, userId } }),
+      prisma.groupTeacherInvite.deleteMany({ where: { groupId: id, id: userId } }),
+    ]);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {

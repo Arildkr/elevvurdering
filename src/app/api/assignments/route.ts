@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateSession, requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 import { createAssignmentSchema } from "@/lib/validation/assignment";
 import { getAssignmentPhase } from "@/lib/phase";
 
@@ -13,7 +14,14 @@ export async function GET() {
 
     if (user.isAdmin) {
       const assignments = await prisma.assignment.findMany({
-        where: { group: { adminId: user.id } },
+        where: {
+          group: {
+            OR: [
+              { adminId: user.id },
+              { groupTeachers: { some: { userId: user.id } } },
+            ],
+          },
+        },
         include: {
           group: { select: { id: true, name: true } },
           _count: { select: { texts: true, reviewAssignments: true } },
@@ -83,6 +91,7 @@ export async function GET() {
           feedbackOpen: a.feedbackOpen,
           timerEndAt: a.timerEndAt,
           timerLabel: a.timerLabel,
+          isExercise: a.isExercise,
         };
       })
     );
@@ -114,7 +123,7 @@ export async function POST(request: NextRequest) {
     if (!group) {
       return NextResponse.json({ error: "Gruppe ikke funnet" }, { status: 404 });
     }
-    if (group.adminId !== admin.id) {
+    if (!await canAccessGroup(parsed.data.groupId, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang til denne gruppen" }, { status: 403 });
     }
 
@@ -142,6 +151,11 @@ export async function POST(request: NextRequest) {
           ? new Date(parsed.data.feedbackDeadline)
           : null,
         toolsConfig: toolsConfig ?? null,
+        isExercise: parsed.data.isExercise ?? false,
+        taskOption1: parsed.data.taskOption1 ?? null,
+        taskOption2: parsed.data.taskOption2 ?? null,
+        exerciseLanguage: parsed.data.exerciseLanguage ?? null,
+        requireTeacherFeedback: parsed.data.requireTeacherFeedback ?? false,
       },
     });
 

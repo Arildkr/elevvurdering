@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 
 export async function GET(
   _request: NextRequest,
@@ -10,9 +11,7 @@ export async function GET(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    // Verify ownership
-    const group = await prisma.group.findUnique({ where: { id } });
-    if (!group || group.adminId !== admin.id) {
+    if (!await canAccessGroup(id, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 

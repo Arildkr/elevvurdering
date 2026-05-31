@@ -33,7 +33,7 @@ export async function GET(
 
     const text = await prisma.text.findUnique({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
-      select: { id: true, content: true, createdAt: true, updatedAt: true },
+      select: { id: true, content: true, chosenTaskText: true, createdAt: true, updatedAt: true },
     });
 
     const phase = getAssignmentPhase(assignment.writeDeadline, assignment.reviewDeadline, assignment.isPaused);
@@ -74,6 +74,7 @@ export async function POST(
 
     const sanitized = sanitizeHtml(parsed.data.content);
     const windowSwitches = typeof body.windowSwitches === "number" ? body.windowSwitches : undefined;
+    const chosenTaskText = typeof body.chosenTaskText === "string" ? body.chosenTaskText : undefined;
     const text = await prisma.text.upsert({
       where: { assignmentId_authorId: { assignmentId: id, authorId: user.id } },
       update: { content: sanitized, ...(windowSwitches !== undefined && { windowSwitches }) },
@@ -82,6 +83,7 @@ export async function POST(
         authorId: user.id,
         content: sanitized,
         ...(windowSwitches !== undefined && { windowSwitches }),
+        ...(chosenTaskText !== undefined && { chosenTaskText }),
       },
     });
 

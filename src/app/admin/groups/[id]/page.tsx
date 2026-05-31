@@ -12,23 +12,53 @@ interface Member {
   joinedAt: string;
 }
 
+interface CoTeacher {
+  id: string;
+  userId: string;
+  user: { id: string; name: string; email: string };
+}
+
+interface PendingInvite {
+  id: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 interface Group {
   id: string;
   name: string;
   joinCode: string;
+  adminId: string;
   members: { user: Member }[];
+}
+
+interface Me {
+  id: string;
 }
 
 export default function AdminGroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [kicking, setKicking] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
+  // Co-teacher state
+  const [coTeachers, setCoTeachers] = useState<CoTeacher[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviting, setInviting] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null);
+  const [removingTeacher, setRemovingTeacher] = useState<string | null>(null);
+  const [endingYear, setEndingYear] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState(false);
+
   useEffect(() => {
     loadGroup();
+    loadMe();
   }, [id]);
 
   async function loadGroup() {
@@ -39,6 +69,26 @@ export default function AdminGroupDetailPage() {
       setLoading(false);
     }
   }
+
+  async function loadMe() {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) setMe(await res.json());
+  }
+
+  async function loadTeachers() {
+    const res = await fetch(`/api/groups/${id}/teachers`);
+    if (res.ok) {
+      const data = await res.json();
+      setCoTeachers(data.coTeachers);
+      setPendingInvites(data.pendingInvites);
+    }
+  }
+
+  const isOwner = group && me && group.adminId === me.id;
+
+  useEffect(() => {
+    if (isOwner) loadTeachers();
+  }, [isOwner]);
 
   async function copyCode(code: string) {
     await navigator.clipboard.writeText(code);
@@ -68,7 +118,6 @@ export default function AdminGroupDetailPage() {
     if (!confirm(`Er du sikker på at du vil deaktivere ${userName}? Brukeren vil ikke kunne logge inn, og tekst/reviews vil bli skjult.`)) {
       return;
     }
-
     setKicking(userId);
     try {
       const res = await fetch(`/api/users/${userId}/deactivate`, { method: "PATCH" });
@@ -80,6 +129,78 @@ export default function AdminGroupDetailPage() {
       }
     } finally {
       setKicking(null);
+    }
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    setInviting(true);
+    setInviteMsg(null);
+    try {
+      const res = await fetch(`/api/groups/${id}/teachers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteMsg({ type: "error", text: data.error || "Noe gikk galt" });
+      } else {
+        setInviteMsg({ type: "ok", text: `Invitasjon sendt til ${inviteEmail}` });
+        setInviteEmail("");
+        loadTeachers();
+      }
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleEndYear() {
+    const activeCount = group?.members.filter((m) => m.user.isActive).length ?? 0;
+    if (!confirm(`Dette vil deaktivere alle ${activeCount} aktive elever i gruppen og logge dem ut. Fortsette?`)) return;
+    setEndingYear(true);
+    try {
+      const res = await fetch(`/api/groups/${id}/end-year`, { method: "POST" });
+      if (res.ok) {
+        loadGroup();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+      }
+    } finally {
+      setEndingYear(false);
+    }
+  }
+
+  async function handleDeleteGroup() {
+    const confirmName = prompt(`Skriv inn gruppenavnet "${group?.name}" for å bekrefte sletting:`);
+    if (confirmName !== group?.name) {
+      if (confirmName !== null) alert("Gruppenavn stemmer ikke. Sletting avbrutt.");
+      return;
+    }
+    setDeletingGroup(true);
+    try {
+      const res = await fetch(`/api/groups/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.href = "/admin/groups";
+      } else {
+        const data = await res.json();
+        alert(data.error || "Noe gikk galt");
+        setDeletingGroup(false);
+      }
+    } catch {
+      setDeletingGroup(false);
+    }
+  }
+
+  async function handleRemoveTeacher(entityId: string) {
+    if (!confirm("Fjerne denne læreren fra gruppen?")) return;
+    setRemovingTeacher(entityId);
+    try {
+      await fetch(`/api/groups/${id}/teachers/${entityId}`, { method: "DELETE" });
+      loadTeachers();
+    } finally {
+      setRemovingTeacher(null);
     }
   }
 
@@ -98,28 +219,126 @@ export default function AdminGroupDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
           <p className="text-sm text-gray-500 mt-1">{group.members.length} medlemmer</p>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
-          <p className="text-xs text-blue-600 font-medium mb-2">Gruppekode</p>
-          <p className="text-2xl font-mono font-bold text-blue-700 tracking-wider mb-3">
-            {group.joinCode}
-          </p>
-          <div className="flex gap-2 justify-center">
+        {isOwner && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+            <p className="text-xs text-blue-600 font-medium mb-2">Gruppekode</p>
+            <p className="text-2xl font-mono font-bold text-blue-700 tracking-wider mb-3">
+              {group.joinCode}
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => copyCode(group.joinCode)}
+                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {copied ? "Kopiert!" : "Kopier"}
+              </button>
+              <button
+                onClick={handleRegenerateCode}
+                disabled={regenerating}
+                className="text-xs bg-white border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50"
+              >
+                {regenerating ? "Genererer..." : "Ny kode"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Co-teacher management — owner only */}
+      {isOwner && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Medlærere</h2>
+
+          {coTeachers.length === 0 && pendingInvites.length === 0 ? (
+            <p className="text-sm text-gray-400 mb-4">Ingen medlærere ennå.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 mb-4">
+              {coTeachers.map((ct) => (
+                <li key={ct.id} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">{ct.user.name}</span>
+                    <span className="text-xs text-gray-400 ml-2">{ct.user.email}</span>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveTeacher(ct.userId)}
+                    disabled={removingTeacher === ct.userId}
+                    className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    Fjern
+                  </button>
+                </li>
+              ))}
+              {pendingInvites.map((inv) => (
+                <li key={inv.id} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <span className="text-sm text-gray-600">{inv.email}</span>
+                    <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Venter</span>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveTeacher(inv.id)}
+                    disabled={removingTeacher === inv.id}
+                    className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                  >
+                    Avbryt
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <form onSubmit={handleInvite} className="flex gap-2 items-start">
+            <div className="flex-1">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => { setInviteEmail(e.target.value); setInviteMsg(null); }}
+                placeholder="kollega@skole.no"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              {inviteMsg && (
+                <p className={`mt-1.5 text-xs ${inviteMsg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
+                  {inviteMsg.text}
+                </p>
+              )}
+            </div>
             <button
-              onClick={() => copyCode(group.joinCode)}
-              className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              type="submit"
+              disabled={inviting}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
-              {copied ? "Kopiert!" : "Kopier"}
+              {inviting ? "Sender..." : "Inviter"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Danger zone — owner only */}
+      {isOwner && (
+        <div className="bg-white rounded-xl border border-red-200 p-6 mb-6">
+          <h2 className="font-semibold text-gray-900 mb-1">Farlig sone</h2>
+          <p className="text-sm text-gray-500 mb-4">Disse handlingene kan ikke angres.</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleEndYear}
+              disabled={endingYear}
+              className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-100 disabled:opacity-50 transition-colors"
+            >
+              {endingYear ? "Avslutter..." : "Avslutt skoleår"}
             </button>
             <button
-              onClick={handleRegenerateCode}
-              disabled={regenerating}
-              className="text-xs bg-white border border-blue-300 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50"
+              onClick={handleDeleteGroup}
+              disabled={deletingGroup}
+              className="bg-red-50 border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 disabled:opacity-50 transition-colors"
             >
-              {regenerating ? "Genererer..." : "Ny kode"}
+              {deletingGroup ? "Sletter..." : "Slett gruppe"}
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-3">
+            «Avslutt skoleår» deaktiverer alle elever og logger dem ut. «Slett gruppe» fjerner gruppen og all tilknyttet data permanent.
+          </p>
         </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full">
@@ -148,7 +367,7 @@ export default function AdminGroupDetailPage() {
                   {new Date(m.user.joinedAt).toLocaleDateString("no-NO")}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  {m.user.isActive && (
+                  {isOwner && m.user.isActive && (
                     <button
                       onClick={() => handleKick(m.user.id, m.user.name)}
                       disabled={kicking === m.user.id}

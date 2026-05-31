@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
-import { canAccessGroup } from "@/lib/group-access";
 
 export async function POST(
   _request: NextRequest,
@@ -11,27 +10,31 @@ export async function POST(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    const assignment = await prisma.assignment.findUnique({ where: { id }, select: { groupId: true, feedbackOpen: true } });
-
-    if (!assignment) {
-      return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
-    }
-
-    if (!await canAccessGroup(assignment.groupId, admin.id)) {
+    // Owner-only
+    const group = await prisma.group.findUnique({ where: { id } });
+    if (!group || group.adminId !== admin.id) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
-    const updated = await prisma.assignment.update({
-      where: { id },
-      data: { feedbackOpen: !assignment.feedbackOpen },
+    // Find all active students in this group
+    const members = await prisma.groupMember.findMany({
+      where: { groupId: id },
+      select: { userId: true },
     });
+    const userIds = members.map((m) => m.userId);
 
-    return NextResponse.json({
-      feedbackOpen: updated.feedbackOpen,
-      message: updated.feedbackOpen
-        ? "Tilbakemeldinger er nå åpne"
-        : "Tilbakemeldinger er nå lukket",
-    });
+    // Deactivate all students and delete their sessions
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { id: { in: userIds }, isAdmin: false },
+        data: { isActive: false },
+      }),
+      prisma.session.deleteMany({
+        where: { userId: { in: userIds } },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true, deactivated: userIds.length });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
@@ -39,7 +42,7 @@ export async function POST(
     if (error instanceof Error && error.message === "Forbidden") {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
-    console.error("Toggle feedback error:", error);
+    console.error("End year error:", error);
     return NextResponse.json({ error: "Noe gikk galt" }, { status: 500 });
   }
 }

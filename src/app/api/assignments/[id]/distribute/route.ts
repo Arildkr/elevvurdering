@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 import { distributeReviews } from "@/lib/distribution";
+import { canAccessGroup } from "@/lib/group-access";
 
 export async function POST(
   _request: NextRequest,
@@ -11,12 +12,11 @@ export async function POST(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    // Verify ownership
     const assignment = await prisma.assignment.findUnique({
       where: { id },
-      include: { group: { select: { adminId: true } } },
+      select: { groupId: true, writeDeadline: true, isPaused: true },
     });
-    if (!assignment || assignment.group.adminId !== admin.id) {
+    if (!assignment || !await canAccessGroup(assignment.groupId, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 

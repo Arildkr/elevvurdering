@@ -20,10 +20,13 @@ interface Assignment {
   isPaused: boolean;
   groupName: string;
   phase: "writing" | "review" | "closed" | "paused";
+  isExercise?: boolean;
+  taskOption1?: string | null;
+  taskOption2?: string | null;
 }
 
 interface TextStatus {
-  text: { id: string; content: string } | null;
+  text: { id: string; content: string; chosenTaskText?: string | null } | null;
   canEdit: boolean;
   canSubmit: boolean;
 }
@@ -166,10 +169,12 @@ export default function AssignmentDetailPage() {
             <p className="text-gray-600 mb-4">{assignment.description}</p>
           )}
 
-          {assignment.taskText && (
+          {(assignment.isExercise ? textStatus?.text?.chosenTaskText : assignment.taskText) && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Oppgave</p>
-              <p className="text-gray-800 text-sm whitespace-pre-wrap">{assignment.taskText}</p>
+              <p className="text-gray-800 text-sm whitespace-pre-wrap">
+                {assignment.isExercise ? textStatus?.text?.chosenTaskText : assignment.taskText}
+              </p>
             </div>
           )}
 
@@ -228,6 +233,35 @@ export default function AssignmentDetailPage() {
           {(assignment.phase === "writing" || (assignment.phase === "paused" && textStatus?.text)) && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-900 mb-2">Din tekst</h2>
+
+              {/* Exercise: task selection when no text submitted yet */}
+              {assignment.isExercise && !textStatus?.text && assignment.phase === "writing" &&
+                (assignment.taskOption1 || assignment.taskOption2) && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-3">Velg oppgavealternativ og gå til skriving:</p>
+                  <div className="space-y-3">
+                    {assignment.taskOption1 && (
+                      <Link
+                        href={`/assignment/${id}/submit?task=1`}
+                        className="block bg-blue-50 border border-blue-200 rounded-xl p-4 hover:bg-blue-100 transition-colors"
+                      >
+                        <p className="text-xs font-semibold text-blue-700 mb-1">Alternativ 1</p>
+                        <p className="text-sm text-gray-800">{assignment.taskOption1}</p>
+                      </Link>
+                    )}
+                    {assignment.taskOption2 && (
+                      <Link
+                        href={`/assignment/${id}/submit?task=2`}
+                        className="block bg-blue-50 border border-blue-200 rounded-xl p-4 hover:bg-blue-100 transition-colors"
+                      >
+                        <p className="text-xs font-semibold text-blue-700 mb-1">Alternativ 2</p>
+                        <p className="text-sm text-gray-800">{assignment.taskOption2}</p>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {textStatus?.text ? (
                 <div>
                   <p className="text-green-600 text-sm mb-3">Du har levert tekst.</p>
@@ -240,7 +274,7 @@ export default function AssignmentDetailPage() {
                     </Link>
                   )}
                 </div>
-              ) : assignment.phase === "writing" ? (
+              ) : assignment.phase === "writing" && !(assignment.isExercise && (assignment.taskOption1 || assignment.taskOption2)) ? (
                 <Link
                   href={`/assignment/${id}/submit`}
                   className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -252,7 +286,7 @@ export default function AssignmentDetailPage() {
           )}
 
           {/* Review section */}
-          {(reviewAssignments.length > 0 || assignment.phase === "review" || assignment.phase === "closed") && (
+          {!assignment.isExercise && (reviewAssignments.length > 0 || assignment.phase === "review" || assignment.phase === "closed") && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-900 mb-2">Respons</h2>
               {reviewAssignments.length > 0 ? (

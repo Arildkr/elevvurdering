@@ -15,13 +15,16 @@ model User {
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
 
-  sessions          Session[]
-  groupMemberships  GroupMember[]
-  createdGroups     Group[]             @relation("GroupAdmin")
-  texts             Text[]
-  reviewAssignments ReviewAssignment[]  @relation("Reviewer")
-  reviews           Review[]            @relation("ReviewAuthor")
-  teacherFeedbacks  TeacherFeedback[]   @relation("TeacherFeedbackAdmin")
+  sessions              Session[]
+  groupMemberships      GroupMember[]
+  createdGroups         Group[]              @relation("GroupAdmin")
+  texts                 Text[]
+  reviewAssignments     ReviewAssignment[]   @relation("Reviewer")
+  reviews               Review[]             @relation("ReviewAuthor")
+  teacherFeedbacks      TeacherFeedback[]    @relation("TeacherFeedbackAdmin")
+  groupTeacherships     GroupTeacher[]       @relation("GroupTeacherUser")
+  groupTeacherInvitedOf GroupTeacher[]       @relation("GroupTeacherInviter")
+  groupTeacherInvitesSent GroupTeacherInvite[] @relation("GroupTeacherInviteBy")
 }
 
 model Group {
@@ -31,9 +34,11 @@ model Group {
   adminId   String
   createdAt DateTime @default(now())
 
-  admin       User          @relation("GroupAdmin", fields: [adminId], references: [id])
-  members     GroupMember[]
-  assignments Assignment[]
+  admin               User                 @relation("GroupAdmin", fields: [adminId], references: [id])
+  members             GroupMember[]
+  assignments         Assignment[]
+  groupTeachers       GroupTeacher[]
+  groupTeacherInvites GroupTeacherInvite[]
 }
 
 model GroupMember {
@@ -63,9 +68,14 @@ model Assignment {
   timerLabel       String?
   isPaused         Boolean   @default(false)
   isArchived       Boolean   @default(false)
-  toolsConfig      String?   // JSON: AssignmentToolsConfig
-  taskText         String?   // Oppgavetekst som vises for eleven under skriving
-  createdAt        DateTime  @default(now())
+  toolsConfig             String?   // JSON: AssignmentToolsConfig
+  taskText                String?   // Oppgavetekst som vises for eleven under skriving
+  isExercise              Boolean   @default(false)
+  taskOption1             String?   // Skjønnlitterær oppgave (øving)
+  taskOption2             String?   // Sakprosa-oppgave (øving)
+  exerciseLanguage        String?   // "bokmål" | "nynorsk"
+  requireTeacherFeedback  Boolean   @default(false)
+  createdAt               DateTime  @default(now())
 
   group             Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
   texts             Text[]
@@ -78,6 +88,7 @@ model Text {
   assignmentId     String
   authorId         String
   content          String
+  chosenTaskText   String?
   windowSwitches   Int       @default(0)
   revisedContent   String?
   revisedAt        DateTime?
@@ -156,6 +167,34 @@ model TeacherFeedback {
 
   @@index([textId])
   @@index([assignmentId])
+}
+
+model GroupTeacher {
+  id               String   @id @default(cuid())
+  groupId          String
+  userId           String
+  invitedByAdminId String
+  createdAt        DateTime @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User  @relation("GroupTeacherUser", fields: [userId], references: [id])
+  invitedBy User  @relation("GroupTeacherInviter", fields: [invitedByAdminId], references: [id])
+
+  @@unique([groupId, userId])
+}
+
+model GroupTeacherInvite {
+  id               String   @id @default(cuid())
+  groupId          String
+  email            String
+  invitedByAdminId String
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("GroupTeacherInviteBy", fields: [invitedByAdminId], references: [id])
+
+  @@unique([groupId, email])
 }
 
 model TeacherOtp {

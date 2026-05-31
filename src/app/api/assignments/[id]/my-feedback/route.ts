@@ -50,6 +50,17 @@ export async function GET(
       return NextResponse.json({ feedback: [], message: "Du har ikke levert tekst" });
     }
 
+    // Block if requireTeacherFeedback and no teacher feedback given yet
+    if (assignment.requireTeacherFeedback) {
+      const tfCount = await prisma.teacherFeedback.count({ where: { textId: text.id } });
+      if (tfCount === 0) {
+        return NextResponse.json(
+          { error: "Læreren din har ikke gitt tilbakemelding ennå. Vent til du får beskjed.", feedbackClosed: false },
+          { status: 403 }
+        );
+      }
+    }
+
     // Get all non-rejected reviews on user's text
     const reviews = await prisma.review.findMany({
       where: {

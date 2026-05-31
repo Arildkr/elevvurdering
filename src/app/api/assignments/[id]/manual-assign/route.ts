@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 
 export async function POST(
   request: NextRequest,
@@ -12,13 +13,13 @@ export async function POST(
 
     const assignment = await prisma.assignment.findUnique({
       where: { id },
-      include: { group: { select: { adminId: true, id: true } } },
+      select: { groupId: true },
     });
 
     if (!assignment) {
       return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
     }
-    if (assignment.group.adminId !== admin.id) {
+    if (!await canAccessGroup(assignment.groupId, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
@@ -45,7 +46,7 @@ export async function POST(
 
     // Verify reviewer is a member of the group
     const membership = await prisma.groupMember.findUnique({
-      where: { groupId_userId: { groupId: assignment.group.id, userId: reviewerId } },
+      where: { groupId_userId: { groupId: assignment.groupId, userId: reviewerId } },
     });
     if (!membership) {
       return NextResponse.json({ error: "Eleven er ikke i denne gruppen" }, { status: 400 });

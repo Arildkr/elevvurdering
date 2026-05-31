@@ -8,6 +8,7 @@ import {
   type AssignmentToolsConfig,
   type PhaseTools,
 } from "@/lib/tools-config";
+import { EXAM_PRESETS, type ExamLanguage } from "@/lib/exam-presets";
 
 interface Group {
   id: string;
@@ -23,6 +24,7 @@ interface Assignment {
   group: { id: string; name: string };
   phase: "writing" | "review" | "closed" | "paused";
   isArchived: boolean;
+  isExercise?: boolean;
   _count: { texts: number; reviewAssignments: number };
 }
 
@@ -58,6 +60,12 @@ export default function AdminAssignmentsPage() {
   const [feedbackDeadline, setFeedbackDeadline] = useState("");
   const [taskText, setTaskText] = useState("");
   const [toolsConfig, setToolsConfig] = useState<AssignmentToolsConfig>(DEFAULT_TOOLS_CONFIG);
+  // Exercise fields
+  const [isExercise, setIsExercise] = useState(false);
+  const [exerciseLanguage, setExerciseLanguage] = useState<ExamLanguage>("bokmål");
+  const [taskOption1, setTaskOption1] = useState("");
+  const [taskOption2, setTaskOption2] = useState("")
+  const [requireTeacherFeedback, setRequireTeacherFeedback] = useState(false);
 
   function updatePhaseTool<K extends keyof PhaseTools>(
     phase: keyof AssignmentToolsConfig,
@@ -99,13 +107,18 @@ export default function AdminAssignmentsPage() {
         body: JSON.stringify({
           title,
           description: description || undefined,
-          taskText: taskText || undefined,
+          taskText: !isExercise && taskText ? taskText : undefined,
           groupId,
           toolsConfig: JSON.stringify(toolsConfig),
           writeDeadline: writeDeadline ? new Date(writeDeadline).toISOString() : undefined,
-          reviewDeadline: reviewDeadline ? new Date(reviewDeadline).toISOString() : undefined,
-          minReviews,
-          feedbackDeadline: feedbackDeadline ? new Date(feedbackDeadline).toISOString() : undefined,
+          reviewDeadline: !isExercise && reviewDeadline ? new Date(reviewDeadline).toISOString() : undefined,
+          minReviews: isExercise ? 1 : minReviews,
+          feedbackDeadline: !isExercise && feedbackDeadline ? new Date(feedbackDeadline).toISOString() : undefined,
+          isExercise: isExercise || undefined,
+          taskOption1: isExercise && taskOption1 ? taskOption1 : undefined,
+          taskOption2: isExercise && taskOption2 ? taskOption2 : undefined,
+          exerciseLanguage: isExercise ? exerciseLanguage : undefined,
+          requireTeacherFeedback: isExercise ? requireTeacherFeedback : undefined,
         }),
       });
 
@@ -123,6 +136,11 @@ export default function AdminAssignmentsPage() {
       setReviewDeadline("");
       setMinReviews(1);
       setFeedbackDeadline("");
+      setIsExercise(false);
+      setExerciseLanguage("bokmål");
+      setTaskOption1("");
+      setTaskOption2("");
+      setRequireTeacherFeedback(false);
       setShowForm(false);
       loadData();
     } catch {
@@ -191,8 +209,34 @@ export default function AdminAssignmentsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
           <h2 className="font-semibold text-gray-900 mb-4">Ny oppgave</h2>
 
+          {/* Type toggle */}
+          <div className="flex gap-2 mb-5">
+            <button
+              type="button"
+              onClick={() => setIsExercise(false)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                !isExercise
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Elevvurdering
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsExercise(true)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                isExercise
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Øvingsoppgave
+            </button>
+          </div>
+
           {/* Onboarding: oppgaveflyt */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
+          {!isExercise && <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Slik fungerer oppgaven</p>
             <div className="flex items-start gap-0">
               {[
@@ -218,7 +262,7 @@ export default function AdminAssignmentsPage() {
             <p className="text-xs text-slate-400 mt-3 border-t border-slate-200 pt-2">
               Du styrer fasene manuelt fra oppgavesiden. Trinn 2 og 3 er valgfrie — du kan avslutte etter Skriving om du vil.
             </p>
-          </div>
+          </div>}
 
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
@@ -265,17 +309,111 @@ export default function AdminAssignmentsPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavetekst (valgfritt)</label>
-              <textarea
-                value={taskText}
-                onChange={(e) => setTaskText(e.target.value)}
-                rows={4}
-                placeholder="Skriv oppgaveteksten her. Denne vises for eleven mens de skriver."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-              />
-              <p className="text-xs text-gray-400 mt-1">Vises i en blå boks over tekstfeltet under skriving.</p>
-            </div>
+            {!isExercise && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavetekst (valgfritt)</label>
+                <textarea
+                  value={taskText}
+                  onChange={(e) => setTaskText(e.target.value)}
+                  rows={4}
+                  placeholder="Skriv oppgaveteksten her. Denne vises for eleven mens de skriver."
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                />
+                <p className="text-xs text-gray-400 mt-1">Vises i en blå boks over tekstfeltet under skriving.</p>
+              </div>
+            )}
+
+            {isExercise && (
+              <div className="space-y-4 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Øvingsinnstillinger</p>
+
+                {/* Language */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Målform</label>
+                  <div className="flex gap-2">
+                    {(["bokmål", "nynorsk"] as ExamLanguage[]).map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => { setExerciseLanguage(lang); setTaskOption1(""); setTaskOption2(""); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors capitalize ${
+                          exerciseLanguage === lang
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Task option 1 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavealternativ 1 (valgfritt)</label>
+                  <select
+                    onChange={(e) => { if (e.target.value) setTaskOption1(e.target.value); }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 mb-2 bg-white"
+                    defaultValue=""
+                  >
+                    <option value="">Velg fra eksamensbankens oppgaver...</option>
+                    {(["skjønnlitteratur", "sakprosa"] as const).map((genre) => (
+                      <optgroup key={genre} label={genre.charAt(0).toUpperCase() + genre.slice(1)}>
+                        {EXAM_PRESETS.filter((p) => p.genre === genre && p.language === exerciseLanguage).map((p) => (
+                          <option key={p.id} value={p.text}>{p.text.slice(0, 80)}…</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <textarea
+                    value={taskOption1}
+                    onChange={(e) => setTaskOption1(e.target.value)}
+                    rows={3}
+                    placeholder="Skriv eller rediger oppgaveteksten..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Task option 2 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavealternativ 2 (valgfritt)</label>
+                  <select
+                    onChange={(e) => { if (e.target.value) setTaskOption2(e.target.value); }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 mb-2 bg-white"
+                    defaultValue=""
+                  >
+                    <option value="">Velg fra eksamensbankens oppgaver...</option>
+                    {(["skjønnlitteratur", "sakprosa"] as const).map((genre) => (
+                      <optgroup key={genre} label={genre.charAt(0).toUpperCase() + genre.slice(1)}>
+                        {EXAM_PRESETS.filter((p) => p.genre === genre && p.language === exerciseLanguage).map((p) => (
+                          <option key={p.id} value={p.text}>{p.text.slice(0, 80)}…</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <textarea
+                    value={taskOption2}
+                    onChange={(e) => setTaskOption2(e.target.value)}
+                    rows={3}
+                    placeholder="Skriv eller rediger oppgaveteksten..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* requireTeacherFeedback */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requireTeacherFeedback}
+                    onChange={(e) => setRequireTeacherFeedback(e.target.checked)}
+                    className="w-4 h-4 rounded accent-indigo-600"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Krev lærertilbakemelding før eleven kan levere 2. utkast
+                  </span>
+                </label>
+              </div>
+            )}
             <div>
               <button
                 type="button"
@@ -286,7 +424,7 @@ export default function AdminAssignmentsPage() {
               </button>
               {showAdvanced && (
                 <div className="space-y-4 border-t border-gray-100 pt-4 mt-3">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isExercise ? "grid-cols-1" : "grid-cols-2"}`}>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Skrivefrist (valgfritt)</label>
                       <input
@@ -296,40 +434,46 @@ export default function AdminAssignmentsPage() {
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Responsfrist (valgfritt)</label>
-                      <input
-                        type="datetime-local"
-                        value={reviewDeadline}
-                        onChange={(e) => setReviewDeadline(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      />
-                    </div>
+                    {!isExercise && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Responsfrist (valgfritt)</label>
+                        <input
+                          type="datetime-local"
+                          value={reviewDeadline}
+                          onChange={(e) => setReviewDeadline(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Frist for Forbedre-fase (valgfritt)
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={feedbackDeadline}
-                      onChange={(e) => setFeedbackDeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum antall responser per elev
-                    </label>
-                    <input
-                      type="number"
-                      value={minReviews}
-                      onChange={(e) => setMinReviews(parseInt(e.target.value))}
-                      min={1}
-                      max={10}
-                      className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
+                  {!isExercise && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Frist for Forbedre-fase (valgfritt)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={feedbackDeadline}
+                          onChange={(e) => setFeedbackDeadline(e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Minimum antall responser per elev
+                        </label>
+                        <input
+                          type="number"
+                          value={minReviews}
+                          onChange={(e) => setMinReviews(parseInt(e.target.value))}
+                          min={1}
+                          max={10}
+                          className="w-24 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Verktøy per fase */}
                   <div>
@@ -448,7 +592,14 @@ export default function AdminAssignmentsPage() {
             onClick={() => router.push(`/admin/assignments/${a.id}`)}
             className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
           >
-            <td className="px-6 py-4 font-medium text-gray-900">{a.title}</td>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-900">{a.title}</span>
+                {a.isExercise && (
+                  <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Øving</span>
+                )}
+              </div>
+            </td>
             <td className="px-6 py-4 text-gray-600">{a.group.name}</td>
             <td className="px-6 py-4">
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${phaseColors[a.phase]}`}>

@@ -10,6 +10,11 @@ export const createAssignmentSchema = z
     reviewDeadline: z.string().datetime({ message: "Ugyldig dato for vurderingsfrist" }).optional(),
     minReviews: z.number().int().min(1).max(10).default(1),
     feedbackDeadline: z.string().datetime({ message: "Ugyldig dato for tilbakemeldingsfrist" }).optional(),
+    isExercise: z.boolean().optional(),
+    taskOption1: z.string().max(2000).optional(),
+    taskOption2: z.string().max(2000).optional(),
+    exerciseLanguage: z.enum(["bokmål", "nynorsk"]).optional(),
+    requireTeacherFeedback: z.boolean().optional(),
   })
   .refine(
     (data) => {
@@ -33,4 +38,8 @@ export const updateAssignmentSchema = z.object({
   minReviews: z.number().int().min(1).max(10).optional(),
   feedbackDeadline: z.string().datetime().nullable().optional(),
   toolsConfig: z.string().optional(),
+  taskOption1: z.string().max(2000).nullable().optional(),
+  taskOption2: z.string().max(2000).nullable().optional(),
+  exerciseLanguage: z.enum(["bokmål", "nynorsk"]).nullable().optional(),
+  requireTeacherFeedback: z.boolean().optional(),
 });

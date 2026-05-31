@@ -21,6 +21,11 @@ interface AssignmentDetail {
   isPaused: boolean;
   isArchived: boolean;
   toolsConfig: string | null;
+  isExercise: boolean;
+  taskOption1?: string | null;
+  taskOption2?: string | null;
+  exerciseLanguage?: string | null;
+  requireTeacherFeedback: boolean;
   group: { id: string; name: string; joinCode: string };
   phase: "writing" | "review" | "closed" | "paused";
   stats: {
@@ -561,7 +566,7 @@ export default function AdminAssignmentDetailPage() {
               />
             </div>
             <div className="flex gap-3 flex-wrap items-center">
-              {assignment.stats.textCount > 0 && (
+              {!assignment.isExercise && assignment.stats.textCount > 0 && (
                 <button
                   onClick={handleDistribute}
                   disabled={distributing}
@@ -573,13 +578,32 @@ export default function AdminAssignmentDetailPage() {
                   {distributing ? "Tildeler..." : assignment.distributionDone ? "Tildel på nytt" : "Tildel tekster"}
                 </button>
               )}
-              {assignment.distributionDone && (
+              {!assignment.isExercise && assignment.distributionDone && (
                 <button
                   onClick={() => handlePhaseChange("review")}
                   disabled={changingPhase}
                   className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors"
                 >
                   Bytt til Responsfase →
+                </button>
+              )}
+              {assignment.isExercise && assignment.stats.textCount > 0 && (
+                <button
+                  onClick={handleToggleFeedback}
+                  disabled={togglingFeedback}
+                  title="Åpner tilbakemeldingsfasen — elever kan se lærertilbakemelding og levere 2. utkast."
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {togglingFeedback ? "..." : "Åpne tilbakemelding"}
+                </button>
+              )}
+              {assignment.isExercise && (
+                <button
+                  onClick={() => handlePhaseChange("closed")}
+                  disabled={changingPhase}
+                  className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-50 transition-colors"
+                >
+                  Avslutt oppgaven
                 </button>
               )}
               <div className="flex-1" />
@@ -935,17 +959,19 @@ export default function AdminAssignmentDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
-        {(["texts", "reviews", "settings"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            {{ texts: "Tekster", reviews: "Vurderinger", settings: "Innstillinger" }[t]}
-          </button>
-        ))}
+        {(["texts", "reviews", "settings"] as const)
+          .filter((t) => !(t === "reviews" && assignment.isExercise))
+          .map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {{ texts: "Tekster", reviews: "Vurderinger", settings: "Innstillinger" }[t]}
+            </button>
+          ))}
       </div>
 
       {/* Tekster tab */}
@@ -1180,6 +1206,40 @@ export default function AdminAssignmentDetailPage() {
               <p className="text-gray-400 text-sm italic">Ingen oppgavetekst satt.</p>
             )}
           </div>
+
+          {/* Øvingsinnstillinger */}
+          {assignment.isExercise && (
+            <div className="bg-white rounded-xl border border-indigo-200 p-5">
+              <h3 className="font-medium text-gray-700 mb-3">Øvingsoppgave</h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Målform: </span>
+                  <span className="text-gray-500 capitalize">{assignment.exerciseLanguage ?? "ikke satt"}</span>
+                </div>
+                {assignment.taskOption1 && (
+                  <div>
+                    <p className="font-medium text-gray-600 mb-1">Oppgavealternativ 1:</p>
+                    <p className="text-gray-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">{assignment.taskOption1}</p>
+                  </div>
+                )}
+                {assignment.taskOption2 && (
+                  <div>
+                    <p className="font-medium text-gray-600 mb-1">Oppgavealternativ 2:</p>
+                    <p className="text-gray-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap">{assignment.taskOption2}</p>
+                  </div>
+                )}
+                {!assignment.taskOption1 && !assignment.taskOption2 && (
+                  <p className="text-gray-400 italic">Ingen oppgavealternativer satt — eleven skriver fritt.</p>
+                )}
+                <div>
+                  <span className="font-medium text-gray-600">Krev lærertilbakemelding før 2. utkast: </span>
+                  <span className={assignment.requireTeacherFeedback ? "text-green-700 font-medium" : "text-gray-500"}>
+                    {assignment.requireTeacherFeedback ? "Ja" : "Nei"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Hjelpemidler */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">

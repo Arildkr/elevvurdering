@@ -18,6 +18,7 @@ interface Assignment {
   feedbackOpen: boolean;
   timerEndAt: string | null;
   timerLabel: string | null;
+  isExercise?: boolean;
 }
 
 interface User {
@@ -140,7 +141,16 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Mine oppgaver</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Mine oppgaver</h2>
+          <Link
+            href="/practice"
+            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12l2-2 2 2 4-8 2 2"/><circle cx="13" cy="3" r="1"/></svg>
+            Øv til eksamen
+          </Link>
+        </div>
 
         {assignments.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
@@ -199,7 +209,7 @@ export default function DashboardPage() {
                       </Link>
                     </>
                   )}
-                  {a.pendingReviews > 0 && (
+                  {!a.isExercise && a.pendingReviews > 0 && (
                     <Link
                       href={`/assignment/${a.id}/review`}
                       className="inline-flex items-center gap-1.5 bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors"
@@ -219,7 +229,7 @@ export default function DashboardPage() {
                       <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4l4 4-4 4"/></svg>
                     </Link>
                   )}
-                  {a.phase === "review" && a.pendingReviews === 0 && a.unreadCount === 0 && !a.feedbackOpen && (
+                  {!a.isExercise && a.phase === "review" && a.pendingReviews === 0 && a.unreadCount === 0 && !a.feedbackOpen && (
                     <span className="text-sm text-gray-500">Venter på at andre elever skal levere respons</span>
                   )}
                   {a.phase === "paused" && (

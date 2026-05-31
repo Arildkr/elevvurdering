@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 import { updateGroupSchema } from "@/lib/validation/group";
 import { generateUniqueJoinCode } from "@/lib/join-code";
 
@@ -12,8 +13,12 @@ export async function GET(
     const admin = await requireAdmin();
     const { id } = await params;
 
+    if (!await canAccessGroup(id, admin.id)) {
+      return NextResponse.json({ error: "Gruppe ikke funnet" }, { status: 404 });
+    }
+
     const group = await prisma.group.findUnique({
-      where: { id, adminId: admin.id },
+      where: { id },
       include: {
         members: {
           include: {

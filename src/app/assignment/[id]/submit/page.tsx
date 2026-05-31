@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 import { parseToolsConfig, type PhaseTools } from "@/lib/tools-config";
@@ -9,8 +9,11 @@ import { parseToolsConfig, type PhaseTools } from "@/lib/tools-config";
 export default function SubmitTextPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [content, setContent] = useState("");
   const [taskText, setTaskText] = useState<string | null>(null);
+  const [chosenTaskText, setChosenTaskText] = useState<string | null>(null);
+  const [isExercise, setIsExercise] = useState(false);
   const [existingText, setExistingText] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,6 +44,10 @@ export default function SubmitTextPage() {
             setContent(data.text.content);
             setExistingText(true);
             setCanEdit(data.canEdit);
+            if (data.text.chosenTaskText) {
+              setChosenTaskText(data.text.chosenTaskText);
+              setTaskText(data.text.chosenTaskText);
+            }
           } else {
             setCanEdit(true);
           }
@@ -53,11 +60,26 @@ export default function SubmitTextPage() {
           const aData = await assignRes.json();
           setTimerEndAt(aData.timerEndAt);
           setTimerLabel(aData.timerLabel);
-          setTaskText(aData.taskText ?? null);
           setWritingTools(parseToolsConfig(aData.toolsConfig).writing);
+          setIsExercise(!!aData.isExercise);
           if (aData.phase === "paused" || aData.phase === "closed" || aData.phase === "review") {
             router.push(`/assignment/${id}`);
             return;
+          }
+          // For exercise: use URL param only when no existing text/chosenTaskText
+          if (aData.isExercise) {
+            setChosenTaskText((prev) => {
+              if (prev) { setTaskText(prev); return prev; }
+              const taskParam = searchParams.get("task");
+              const chosen =
+                taskParam === "1" && aData.taskOption1 ? aData.taskOption1 :
+                taskParam === "2" && aData.taskOption2 ? aData.taskOption2 :
+                null;
+              if (chosen) setTaskText(chosen);
+              return chosen;
+            });
+          } else {
+            setTaskText(aData.taskText ?? null);
           }
         }
       } finally {
@@ -181,7 +203,11 @@ export default function SubmitTextPage() {
       const res = await fetch(`/api/assignments/${id}/my-text`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, windowSwitches: windowSwitchesRef.current }),
+        body: JSON.stringify({
+          content,
+          windowSwitches: windowSwitchesRef.current,
+          ...(!existingText && chosenTaskText ? { chosenTaskText } : {}),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();

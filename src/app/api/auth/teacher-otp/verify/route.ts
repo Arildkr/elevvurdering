@@ -60,6 +60,25 @@ export async function POST(request: NextRequest) {
     }
     await createSession(teacher.id);
 
+    // Auto-accept any pending group invites for this email
+    const pendingInvites = await prisma.groupTeacherInvite.findMany({
+      where: { email, expiresAt: { gt: new Date() } },
+    });
+    if (pendingInvites.length > 0) {
+      await Promise.all(
+        pendingInvites.map((invite) =>
+          prisma.$transaction([
+            prisma.groupTeacher.upsert({
+              where: { groupId_userId: { groupId: invite.groupId, userId: teacher!.id } },
+              create: { groupId: invite.groupId, userId: teacher!.id, invitedByAdminId: invite.invitedByAdminId },
+              update: {},
+            }),
+            prisma.groupTeacherInvite.delete({ where: { id: invite.id } }),
+          ])
+        )
+      );
+    }
+
     return NextResponse.json({
       id: teacher.id,
       name: teacher.name,

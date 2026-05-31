@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { canAccessGroup } from "@/lib/group-access";
 import * as XLSX from "xlsx";
 
 export async function GET(
@@ -14,14 +15,14 @@ export async function GET(
     const assignment = await prisma.assignment.findUnique({
       where: { id },
       include: {
-        group: { select: { adminId: true, name: true } },
+        group: { select: { name: true } },
       },
     });
 
     if (!assignment) {
       return NextResponse.json({ error: "Oppgave ikke funnet" }, { status: 404 });
     }
-    if (assignment.group.adminId !== admin.id) {
+    if (!await canAccessGroup(assignment.groupId, admin.id)) {
       return NextResponse.json({ error: "Ingen tilgang" }, { status: 403 });
     }
 
