@@ -24,30 +24,33 @@ function TaskPicker({
   const genreOfValue = (v: string): ExamGenre | null =>
     EXAM_PRESETS.find((p) => p.text === v)?.genre ?? null;
 
-  const [activeGenre, setActiveGenre] = useState<ExamGenre>(() => genreOfValue(value) ?? "skjønnlitteratur");
+  const [activeGenre, setActiveGenre] = useState<ExamGenre>(
+    () => genreOfValue(value) ?? "skjønnlitteratur"
+  );
+  const [showCustom, setShowCustom] = useState(false);
 
-  // When language changes the value is cleared externally; reset tab
   useEffect(() => {
-    if (!value) setActiveGenre("skjønnlitteratur");
+    if (!value) { setActiveGenre("skjønnlitteratur"); setShowCustom(false); }
   }, [language, value]);
 
   const presets = EXAM_PRESETS.filter((p) => p.genre === activeGenre && p.language === language);
+  const isCustom = !!value && !EXAM_PRESETS.find((p) => p.text === value);
 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
 
       {/* Genre tabs */}
-      <div className="flex rounded-t-lg border border-gray-200 overflow-hidden">
+      <div className="flex gap-1 mb-3">
         {(["skjønnlitteratur", "sakprosa"] as ExamGenre[]).map((g) => (
           <button
             key={g}
             type="button"
             onClick={() => setActiveGenre(g)}
-            className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
               activeGenre === g
-                ? "bg-white text-indigo-700 border-b-2 border-indigo-600"
-                : "bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
             }`}
           >
             {g.charAt(0).toUpperCase() + g.slice(1)}
@@ -55,56 +58,69 @@ function TaskPicker({
         ))}
       </div>
 
-      {/* Numbered task list */}
-      <div className="border border-t-0 border-gray-200 rounded-b-lg divide-y divide-gray-100 mb-3">
-        {presets.map((p, i) => {
+      {/* 2-column card grid */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {presets.map((p) => {
           const selected = value === p.text;
           return (
             <button
               key={p.id}
               type="button"
-              onClick={() => onChange(p.text)}
-              className={`w-full text-left px-4 py-3 flex gap-3 items-start transition-colors ${
-                selected ? "bg-indigo-50" : "hover:bg-gray-50"
+              onClick={() => { onChange(p.text); setShowCustom(false); }}
+              className={`text-left p-3 rounded-xl border-2 transition-all text-sm leading-relaxed ${
+                selected
+                  ? "border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:shadow-sm"
               }`}
             >
-              <span className={`shrink-0 mt-0.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
-                selected ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
-              }`}>
-                {i + 1}
-              </span>
-              <span className={`text-sm leading-relaxed ${selected ? "text-indigo-900 font-medium" : "text-gray-700"}`}>
-                {p.text}
-              </span>
+              {p.text}
             </button>
           );
         })}
       </div>
 
-      {/* Editable textarea — always shows selected/custom text */}
-      {value ? (
-        <div className="relative">
+      {/* Custom / selected state */}
+      {(value && !showCustom && !isCustom) ? (
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <button type="button" onClick={() => onChange("")} className="text-red-500 hover:text-red-700">
+            Fjern valg
+          </button>
+          <button type="button" onClick={() => setShowCustom(true)} className="text-indigo-600 hover:text-indigo-800">
+            Tilpass teksten →
+          </button>
+        </div>
+      ) : (showCustom || isCustom) ? (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500 font-medium">Egendefinert oppgavetekst</span>
+            {!isCustom && (
+              <button type="button" onClick={() => setShowCustom(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                Avbryt
+              </button>
+            )}
+          </div>
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2.5 border border-indigo-300 bg-indigo-50 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 resize-none"
+            placeholder="Skriv oppgaveteksten her..."
+            className="w-full px-3 py-2.5 border border-indigo-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 resize-none"
+            autoFocus
           />
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-            title="Fjern valg"
-          >×</button>
+          {value && (
+            <button type="button" onClick={() => onChange("")} className="text-xs text-red-500 hover:text-red-700">
+              Fjern valg
+            </button>
+          )}
         </div>
       ) : (
-        <textarea
-          value=""
-          onChange={(e) => onChange(e.target.value)}
-          rows={2}
-          placeholder="Velg en oppgave over, eller skriv din egen her..."
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-500 focus:ring-2 focus:ring-indigo-500 resize-none focus:text-gray-900"
-        />
+        <button
+          type="button"
+          onClick={() => setShowCustom(true)}
+          className="text-xs text-indigo-600 hover:text-indigo-800"
+        >
+          + Skriv egendefinert oppgave
+        </button>
       )}
     </div>
   );
