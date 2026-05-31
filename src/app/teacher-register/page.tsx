@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type Step = "form" | "code" | "done";
 
-export default function TeacherRegisterPage() {
+function TeacherRegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl");
@@ -245,5 +245,13 @@ export default function TeacherRegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TeacherRegisterPage() {
+  return (
+    <Suspense>
+      <TeacherRegisterForm />
+    </Suspense>
   );
 }
