@@ -447,6 +447,7 @@ export default function AdminAssignmentsPage() {
                   <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Øvingsoppgave</p>
                   <p className="text-xs text-indigo-600">
                     Elevene skriver tekst og kan få lærertilbakemelding. Ingen vurdering av hverandre.
+                    Oppgavene i banken er hentet fra tidligere oppgave 2 på skriftlig eksamen i norsk.
                   </p>
                 </div>
 
