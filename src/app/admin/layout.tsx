@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import AdminTour, { type AdminTourHandle } from "@/components/AdminTour";
 
 interface User {
   id: string;
@@ -72,6 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const tourRef = useRef<AdminTourHandle>(null);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -118,15 +120,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="mx-4 h-px bg-slate-800" />
 
         {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+        <nav id="tour-nav" className="flex-1 px-2 py-3 space-y-0.5">
           {navItems.map((item) => {
             const isActive =
               item.href === "/admin"
                 ? pathname === "/admin"
                 : pathname.startsWith(item.href);
+            const tourId =
+              item.href === "/admin/groups" ? "tour-nav-groups" :
+              item.href === "/admin/assignments" ? "tour-nav-assignments" :
+              item.href === "/admin/teachers" ? "tour-nav-teachers" :
+              undefined;
             return (
               <Link
                 key={item.href}
+                id={tourId}
                 href={item.href}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
@@ -144,15 +152,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* User footer */}
         <div className="px-4 py-4 border-t border-slate-800">
           <p className="text-xs text-slate-300 font-medium mb-0.5 truncate">{user?.name}</p>
-          <p className="text-xs text-slate-500 mb-3 truncate">Lærer</p>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            Logg ut
-          </button>
+          <p className="text-xs text-slate-500 mb-2 truncate">Lærer</p>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleLogout}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Logg ut
+            </button>
+            <button
+              onClick={() => tourRef.current?.startTour()}
+              title="Vis meg rundt"
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="8" cy="8" r="6.5"/>
+                <path d="M8 11v-1"/>
+                <path d="M8 5a1.5 1.5 0 0 1 1.5 1.5c0 1-1.5 1.5-1.5 2.5"/>
+              </svg>
+              Tur
+            </button>
+          </div>
         </div>
       </aside>
+
+      <AdminTour ref={tourRef} />
 
       {/* Main content */}
       <main className="flex-1 bg-[#edeae0] overflow-auto min-h-screen">{children}</main>
