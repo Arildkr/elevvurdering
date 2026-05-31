@@ -10,6 +10,62 @@ import {
 } from "@/lib/tools-config";
 import { EXAM_PRESETS, type ExamLanguage } from "@/lib/exam-presets";
 
+function TaskPicker({
+  language,
+  value,
+  onChange,
+  label,
+}: {
+  language: ExamLanguage;
+  value: string;
+  onChange: (text: string) => void;
+  label: string;
+}) {
+  const genres = ["skjønnlitteratur", "sakprosa"] as const;
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="border border-gray-200 rounded-lg overflow-hidden mb-2 bg-white">
+        <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
+          {genres.map((genre) => {
+            const presets = EXAM_PRESETS.filter((p) => p.genre === genre && p.language === language);
+            return (
+              <div key={genre}>
+                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                  </span>
+                </div>
+                {presets.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onChange(p.text)}
+                    className={`w-full text-left px-3 py-2.5 text-sm leading-snug transition-colors ${
+                      value === p.text
+                        ? "bg-indigo-50 text-indigo-900 font-medium"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p.text}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+        placeholder="Velg en oppgave over, eller skriv din egen..."
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
+      />
+    </div>
+  );
+}
+
 interface Group {
   id: string;
   name: string;
@@ -325,11 +381,18 @@ export default function AdminAssignmentsPage() {
 
             {isExercise && (
               <div className="space-y-4 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-                <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Øvingsinnstillinger</p>
-
-                {/* Language */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Målform</label>
+                  <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Øvingsoppgave</p>
+                  <p className="text-xs text-indigo-600">
+                    Elevene skriver tekst og kan få lærertilbakemelding. Ingen vurdering av hverandre.
+                  </p>
+                </div>
+
+                {/* Language — applies to whole assignment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Målform <span className="text-xs font-normal text-gray-400">(gjelder hele oppgaven)</span>
+                  </label>
                   <div className="flex gap-2">
                     {(["bokmål", "nynorsk"] as ExamLanguage[]).map((lang) => (
                       <button
@@ -349,56 +412,20 @@ export default function AdminAssignmentsPage() {
                 </div>
 
                 {/* Task option 1 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavealternativ 1 (valgfritt)</label>
-                  <select
-                    onChange={(e) => { if (e.target.value) setTaskOption1(e.target.value); }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 mb-2 bg-white"
-                    defaultValue=""
-                  >
-                    <option value="">Velg fra eksamensbankens oppgaver...</option>
-                    {(["skjønnlitteratur", "sakprosa"] as const).map((genre) => (
-                      <optgroup key={genre} label={genre.charAt(0).toUpperCase() + genre.slice(1)}>
-                        {EXAM_PRESETS.filter((p) => p.genre === genre && p.language === exerciseLanguage).map((p) => (
-                          <option key={p.id} value={p.text}>{p.text.slice(0, 80)}…</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <textarea
-                    value={taskOption1}
-                    onChange={(e) => setTaskOption1(e.target.value)}
-                    rows={3}
-                    placeholder="Skriv eller rediger oppgaveteksten..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+                <TaskPicker
+                  language={exerciseLanguage}
+                  value={taskOption1}
+                  onChange={setTaskOption1}
+                  label="Oppgavealternativ 1 (valgfritt)"
+                />
 
                 {/* Task option 2 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Oppgavealternativ 2 (valgfritt)</label>
-                  <select
-                    onChange={(e) => { if (e.target.value) setTaskOption2(e.target.value); }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 mb-2 bg-white"
-                    defaultValue=""
-                  >
-                    <option value="">Velg fra eksamensbankens oppgaver...</option>
-                    {(["skjønnlitteratur", "sakprosa"] as const).map((genre) => (
-                      <optgroup key={genre} label={genre.charAt(0).toUpperCase() + genre.slice(1)}>
-                        {EXAM_PRESETS.filter((p) => p.genre === genre && p.language === exerciseLanguage).map((p) => (
-                          <option key={p.id} value={p.text}>{p.text.slice(0, 80)}…</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <textarea
-                    value={taskOption2}
-                    onChange={(e) => setTaskOption2(e.target.value)}
-                    rows={3}
-                    placeholder="Skriv eller rediger oppgaveteksten..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+                <TaskPicker
+                  language={exerciseLanguage}
+                  value={taskOption2}
+                  onChange={setTaskOption2}
+                  label="Oppgavealternativ 2 (valgfritt)"
+                />
 
                 {/* requireTeacherFeedback */}
                 <label className="flex items-center gap-3 cursor-pointer">
