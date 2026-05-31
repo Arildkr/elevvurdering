@@ -1,9 +1,25 @@
 "use client";
 
 import "driver.js/dist/driver.css";
-import type { DriveStep } from "driver.js";
+import type { DriveStep, PopoverDOM } from "driver.js";
 import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { usePathname } from "next/navigation";
+
+const chevronRight = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 4l4 4-4 4"/></svg>`;
+const chevronLeft = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M10 12L6 8l4-4"/></svg>`;
+
+function styleButtons(popover: PopoverDOM) {
+  const nextText = popover.nextButton.textContent?.trim() ?? "";
+  if (nextText === "Neste") {
+    popover.nextButton.innerHTML = `<span style="display:flex;align-items:center;gap:5px">${nextText}${chevronRight}</span>`;
+  } else if (nextText === "Neste side") {
+    popover.nextButton.innerHTML = `<span style="display:flex;align-items:center;gap:5px">${nextText}${chevronRight}</span>`;
+  }
+  const prevVisible = (popover.previousButton as HTMLElement).style.display !== "none";
+  if (prevVisible) {
+    popover.previousButton.innerHTML = `<span style="display:flex;align-items:center;gap:5px">${chevronLeft}Forrige</span>`;
+  }
+}
 
 export interface AdminTourHandle {
   startTour: () => void;
@@ -128,10 +144,11 @@ async function launchPageTour(
     animate: true,
     overlayColor: "rgb(0,0,0)",
     overlayOpacity: 0.5,
-    nextBtnText: "Neste →",
-    prevBtnText: "← Forrige",
-    doneBtnText: nextPage ? "Neste side →" : "Ferdig",
+    nextBtnText: "Neste",
+    prevBtnText: "Forrige",
+    doneBtnText: nextPage ? "Neste side" : "Ferdig",
     steps,
+    onPopoverRender: styleButtons,
     onNextClick: nextPage
       ? (_el, _step, opts) => {
           if (opts.driver.getActiveIndex() === lastIndex) {
@@ -158,10 +175,11 @@ async function startFullTour() {
     animate: true,
     overlayColor: "rgb(0,0,0)",
     overlayOpacity: 0.5,
-    nextBtnText: "Neste →",
-    prevBtnText: "← Forrige",
-    doneBtnText: "Neste side →",
+    nextBtnText: "Neste",
+    prevBtnText: "Forrige",
+    doneBtnText: "Neste side",
     steps: INITIAL_STEPS,
+    onPopoverRender: styleButtons,
     onNextClick: (_el, _step, opts) => {
       if (opts.driver.getActiveIndex() === INITIAL_STEPS.length - 1) {
         opts.driver.destroy();
