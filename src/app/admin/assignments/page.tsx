@@ -8,7 +8,7 @@ import {
   type AssignmentToolsConfig,
   type PhaseTools,
 } from "@/lib/tools-config";
-import { EXAM_PRESETS, type ExamLanguage } from "@/lib/exam-presets";
+import { EXAM_PRESETS, type ExamLanguage, type ExamGenre } from "@/lib/exam-presets";
 
 function TaskPicker({
   language,
@@ -21,47 +21,91 @@ function TaskPicker({
   onChange: (text: string) => void;
   label: string;
 }) {
-  const genres = ["skjønnlitteratur", "sakprosa"] as const;
+  const genreOfValue = (v: string): ExamGenre | null =>
+    EXAM_PRESETS.find((p) => p.text === v)?.genre ?? null;
+
+  const [activeGenre, setActiveGenre] = useState<ExamGenre>(() => genreOfValue(value) ?? "skjønnlitteratur");
+
+  // When language changes the value is cleared externally; reset tab
+  useEffect(() => {
+    if (!value) setActiveGenre("skjønnlitteratur");
+  }, [language, value]);
+
+  const presets = EXAM_PRESETS.filter((p) => p.genre === activeGenre && p.language === language);
+
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="border border-gray-200 rounded-lg overflow-hidden mb-2 bg-white">
-        <div className="max-h-52 overflow-y-auto divide-y divide-gray-100">
-          {genres.map((genre) => {
-            const presets = EXAM_PRESETS.filter((p) => p.genre === genre && p.language === language);
-            return (
-              <div key={genre}>
-                <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
-                  </span>
-                </div>
-                {presets.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => onChange(p.text)}
-                    className={`w-full text-left px-3 py-2.5 text-sm leading-snug transition-colors ${
-                      value === p.text
-                        ? "bg-indigo-50 text-indigo-900 font-medium"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {p.text}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+
+      {/* Genre tabs */}
+      <div className="flex rounded-t-lg border border-gray-200 overflow-hidden">
+        {(["skjønnlitteratur", "sakprosa"] as ExamGenre[]).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setActiveGenre(g)}
+            className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              activeGenre === g
+                ? "bg-white text-indigo-700 border-b-2 border-indigo-600"
+                : "bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {g.charAt(0).toUpperCase() + g.slice(1)}
+          </button>
+        ))}
       </div>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        placeholder="Velg en oppgave over, eller skriv din egen..."
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500"
-      />
+
+      {/* Numbered task list */}
+      <div className="border border-t-0 border-gray-200 rounded-b-lg divide-y divide-gray-100 mb-3">
+        {presets.map((p, i) => {
+          const selected = value === p.text;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChange(p.text)}
+              className={`w-full text-left px-4 py-3 flex gap-3 items-start transition-colors ${
+                selected ? "bg-indigo-50" : "hover:bg-gray-50"
+              }`}
+            >
+              <span className={`shrink-0 mt-0.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
+                selected ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
+              }`}>
+                {i + 1}
+              </span>
+              <span className={`text-sm leading-relaxed ${selected ? "text-indigo-900 font-medium" : "text-gray-700"}`}>
+                {p.text}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Editable textarea — always shows selected/custom text */}
+      {value ? (
+        <div className="relative">
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2.5 border border-indigo-300 bg-indigo-50 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 resize-none"
+          />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+            title="Fjern valg"
+          >×</button>
+        </div>
+      ) : (
+        <textarea
+          value=""
+          onChange={(e) => onChange(e.target.value)}
+          rows={2}
+          placeholder="Velg en oppgave over, eller skriv din egen her..."
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-500 focus:ring-2 focus:ring-indigo-500 resize-none focus:text-gray-900"
+        />
+      )}
     </div>
   );
 }
