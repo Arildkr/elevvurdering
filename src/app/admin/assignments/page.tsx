@@ -793,8 +793,39 @@ export default function AdminAssignmentsPage() {
         return (
           <>
             {active.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <p className="text-gray-500">Ingen aktive oppgaver.</p>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+                <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                {groups.length === 0 ? (
+                  <>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Opprett en gruppe først</h2>
+                    <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+                      Før du kan opprette en oppgave trenger du minst én gruppe. Gå til Grupper, opprett klassen din, og del deltakerkoden med elevene.
+                    </p>
+                    <Link
+                      href="/admin/groups"
+                      className="inline-block bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Gå til Grupper
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-2">Opprett din første oppgave</h2>
+                    <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+                      En oppgave styrer hele skriveløpet — fra første utkast og medelevrespons til forbedring og lærertilbakemelding. Du bestemmer hvilke faser som brukes og hvilke skriveverktøy elevene har tilgang til.
+                    </p>
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Opprett oppgave
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">

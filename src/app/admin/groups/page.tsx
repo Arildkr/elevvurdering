@@ -142,8 +142,22 @@ export default function AdminGroupsPage() {
       )}
 
       {groups.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500">Ingen grupper opprettet ennå.</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+          <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Opprett din første gruppe</h2>
+          <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+            Grupper representerer klasser eller elevgrupper. Når du oppretter en gruppe, genereres en unik deltakerkode — elevene bruker den for å registrere seg. Ingen e-post eller passord kreves.
+          </p>
+          <button
+            onClick={() => { setShowForm(true); setNewGroup(null); }}
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Opprett gruppe
+          </button>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
