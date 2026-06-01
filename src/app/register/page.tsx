@@ -77,13 +77,12 @@ export default function RegisterPage() {
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-amber-800 font-medium mb-1">
-                Viktig!
-              </p>
-              <p className="text-sm text-amber-700">
-                Skriv ned dette nummeret og ta vare på det. Du trenger det for å
-                logge inn senere. Det vil ikke bli vist igjen.
-              </p>
+              <p className="text-sm text-amber-800 font-medium mb-1">Viktig!</p>
+              <ul className="text-sm text-amber-700 space-y-1 list-none">
+                <li>📸 Ta et skjermbilde, eller skriv ned nummeret på papir.</li>
+                <li>🔒 Du trenger det for å logge inn — det vises ikke igjen.</li>
+                <li>🙋 Har du mistet det? Læreren din kan finne det for deg.</li>
+              </ul>
             </div>
 
             <button

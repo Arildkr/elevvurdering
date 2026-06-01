@@ -189,9 +189,12 @@ function TeacherRegisterForm() {
             Tilbake
           </button>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Lærerpålogging</h1>
-          <p className="text-gray-500 mb-6">
+          <p className="text-gray-500 mb-3">
             Skriv inn navn og e-postadresse. Vi sender en engangskode som du bruker for å logge inn eller opprette konto.
           </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-800">
+            Bruker du samme e-postadresse neste gang, logger du rett inn på samme konto — ingen ny registrering trengs.
+          </div>
           <form onSubmit={handleRequestCode} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
