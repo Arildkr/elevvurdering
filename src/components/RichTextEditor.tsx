@@ -80,6 +80,7 @@ export default function RichTextEditor({
 
   const [spellCheckEnabled, setSpellCheckEnabled] = useState(false);
   const [readingHelpEnabled, setReadingHelpEnabled] = useState(false);
+  const [editorBg, setEditorBg] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>(tools.targetForm);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
@@ -442,18 +443,39 @@ export default function RichTextEditor({
         )}
 
         {tools.readingHelp && (
-          <button
-            type="button"
-            onClick={() => setReadingHelpEnabled((v) => !v)}
-            title="Lesehjelp: tips om struktur, lesbarhet og forvekslingslyder"
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              readingHelpEnabled
-                ? "bg-blue-100 text-blue-700 border border-blue-300"
-                : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-150"
-            }`}
-          >
-            💡 Lesehjelp
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => { setReadingHelpEnabled((v) => !v); if (readingHelpEnabled) setEditorBg(null); }}
+              title="Lesehjelp: tips om struktur, lesbarhet og forvekslingslyder"
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                readingHelpEnabled
+                  ? "bg-blue-100 text-blue-700 border border-blue-300"
+                  : "bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-150"
+              }`}
+            >
+              💡 Lesehjelp
+            </button>
+            {readingHelpEnabled && (
+              <div className="flex items-center gap-0.5" title="Bakgrunnsfarge">
+                {[
+                  { color: null, label: "Hvit", cls: "bg-white border border-gray-300" },
+                  { color: "#fefce8", label: "Gul", cls: "bg-yellow-50 border border-yellow-300" },
+                  { color: "#fff7ed", label: "Fersken", cls: "bg-orange-50 border border-orange-300" },
+                  { color: "#f0fdf4", label: "Grønn", cls: "bg-green-50 border border-green-300" },
+                  { color: "#eff6ff", label: "Blå", cls: "bg-blue-50 border border-blue-300" },
+                ].map(({ color, label, cls }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setEditorBg(color)}
+                    title={label}
+                    className={`w-5 h-5 rounded-full transition-all ${cls} ${editorBg === color ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {tools.aiAnalysis && (
@@ -476,7 +498,10 @@ export default function RichTextEditor({
       </div>
 
       {/* Editor */}
-      <div className="px-4 py-3 relative">
+      <div
+        className="px-4 py-3 relative transition-colors duration-200"
+        style={editorBg ? { backgroundColor: editorBg } : undefined}
+      >
         {editor.isEmpty && (
           <div className="pointer-events-none absolute text-gray-400 text-sm top-3 left-4">
             {placeholder}
