@@ -19,6 +19,7 @@ import {
   type ReadingIssue,
 } from "@/lib/spellcheck";
 import { getConfusions } from "@/lib/norwegian-confusions";
+import { spellCheckViaWorker } from "@/lib/spell-worker";
 import {
   DEFAULT_PHASE_TOOLS,
   type PhaseTools,
@@ -92,6 +93,8 @@ export default function RichTextEditor({
   const ignoredRef = useRef(ignoredWords);
   ignoredRef.current = ignoredWords;
 
+  const spellDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const applyErrorsToEditor = useCallback(
     (ed: ReturnType<typeof useEditor>, errors: SpellError[], ignored: Set<string>) => {
       if (!ed) return;
@@ -131,26 +134,26 @@ export default function RichTextEditor({
         if (editor && !editor.isDestroyed) applyErrorsToEditor(editor, known, ignored);
       }, 0);
 
-      // Step 2: augment with Hunspell via API
+      // Step 2: augment with Hunspell — try Worker first, fall back to API
       setSpellLoading(true);
       try {
-        const res = await fetch("/api/spellcheck", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: html, lang: currentLang }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const apiErrors: SpellError[] = data.errors ?? [];
-          // Merge: add API errors not already covered by client-side check
-          const knownKeys = new Set(known.map((e) => e.word.toLowerCase()));
-          const extra = apiErrors.filter((e) => !knownKeys.has(e.word.toLowerCase()));
-          const merged = [...known, ...extra];
-          setSpellingErrors(merged);
-          applyErrorsToEditor(editor, merged, ignored);
-        }
+        const knownKeys = new Set(known.map((e) => e.word.toLowerCase()));
+
+        const workerResult = await spellCheckViaWorker(html, currentLang, ignored);
+        const hunspellErrors: SpellError[] = workerResult !== null
+          ? workerResult
+          : await fetch("/api/spellcheck", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: html, lang: currentLang }),
+            }).then((r) => r.ok ? r.json().then((d) => d.errors ?? []) : []);
+
+        const extra = hunspellErrors.filter((e) => !knownKeys.has(e.word.toLowerCase()));
+        const merged = [...known, ...extra];
+        setSpellingErrors(merged);
+        applyErrorsToEditor(editor, merged, ignored);
       } catch {
-        // API failed — client-side errors already shown
+        // already showing Step 1 errors
       } finally {
         setSpellLoading(false);
       }
@@ -200,7 +203,10 @@ export default function RichTextEditor({
         const text = e.state.doc.textContent;
         const lastChar = text[text.length - 1];
         if (!lastChar || /[\s.,!?;:()"'\[\]{}-]/.test(lastChar)) {
-          runSpellCheck(html, lang, ignoredRef.current, e);
+          if (spellDebounceRef.current) clearTimeout(spellDebounceRef.current);
+          spellDebounceRef.current = setTimeout(() => {
+            runSpellCheck(e.getHTML(), lang, ignoredRef.current, e);
+          }, 600);
         }
       }
     },
