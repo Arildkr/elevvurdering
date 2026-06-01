@@ -142,7 +142,8 @@ export function getDyslexiaFriendlyIssues(content: string, lang: "nb" | "nn" = "
   }
 
   // --- 5. Veldig lange setninger ---
-  const sentences = plainText.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+  // Split only on [?!] or on [.] followed by an uppercase letter (avoids splitting on abbreviations like "ca.", "bl.a.", "f.eks.")
+  const sentences = plainText.split(/(?<=[!?])\s+|(?<=\.)\s+(?=[A-ZÆØÅ«"])/).filter((s) => s.trim().length > 0);
   const longSents = sentences.filter((s) => s.trim().split(/\s+/).length > 22);
   if (longSents.length > 0) {
     issues.push({

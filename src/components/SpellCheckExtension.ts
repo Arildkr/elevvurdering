@@ -90,26 +90,30 @@ export const capCheckKey = new PluginKey<DecorationSet>("capCheck");
 function buildCapDecorations(doc: Node): DecorationSet {
   const decorations: Decoration[] = [];
 
-  doc.forEach((blockNode, blockOffset) => {
-    if (!blockNode.isBlock) return;
+  // Use descendants + isTextblock so each paragraph (including those inside list items)
+  // is processed independently — fixes missing cap-check on list items 2-N.
+  doc.descendants((node, pos) => {
+    if (!node.isTextblock) return; // not a textblock — skip but still descend into children
+    if (node.type.name === "codeBlock") return false; // don't check code
 
-    // Collect chars with their document positions
+    // Collect chars from direct inline children of this textblock
     const chars: { char: string; docPos: number }[] = [];
-    blockNode.descendants((node, nodePos) => {
-      if (!node.isText || !node.text) return;
-      for (let i = 0; i < node.text.length; i++) {
-        chars.push({ char: node.text[i], docPos: blockOffset + 1 + nodePos + i });
+    node.forEach((child, childOffset) => {
+      if (!child.isText || !child.text) return;
+      for (let i = 0; i < child.text.length; i++) {
+        chars.push({ char: child.text[i], docPos: pos + 1 + childOffset + i });
       }
     });
 
-    if (chars.length === 0) return;
+    if (chars.length === 0) return false;
 
-    // First character of block must be uppercase
+    // First character of textblock must be uppercase
     if (/[a-zæøå]/.test(chars[0].char)) {
       decorations.push(Decoration.inline(chars[0].docPos, chars[0].docPos + 1, { class: "cap-error" }));
     }
 
-    // After . ? ! the next non-space letter must be uppercase
+    // After sentence-ending punctuation the next non-space letter must be uppercase.
+    // For dots: use lookahead — if next non-space char is lowercase or digit, treat as abbreviation.
     let afterSentenceEnd = false;
     for (let i = 0; i < chars.length; i++) {
       const c = chars[i].char;
@@ -123,15 +127,20 @@ function buildCapDecorations(doc: Node): DecorationSet {
         continue;
       }
 
-      if (c === "." || c === "?" || c === "!") {
-        // Skip dots in decimal numbers (e.g. 3.14)
-        if (c === "." && i > 0 && /\d/.test(chars[i - 1].char)) continue;
-        // Skip dots after single letter (initials / abbreviations like f.eks.)
-        if (c === "." && i > 0 && /[a-zA-ZæøåÆØÅ]/.test(chars[i - 1].char) &&
-            (i < 2 || !/[a-zA-ZæøåÆØÅ]/.test(chars[i - 2].char))) continue;
+      if (c === "?" || c === "!") {
+        afterSentenceEnd = true;
+      } else if (c === ".") {
+        // Skip dots in numbers (3.14)
+        if (i > 0 && /\d/.test(chars[i - 1].char)) continue;
+        // Lookahead: if next non-space char is lowercase or digit → abbreviation (ca., bl.a., kl., f.eks.)
+        let j = i + 1;
+        while (j < chars.length && chars[j].char === " ") j++;
+        if (j < chars.length && /[a-zæøå0-9.]/.test(chars[j].char)) continue;
         afterSentenceEnd = true;
       }
     }
+
+    return false; // don't recurse into textblock's inline content
   });
 
   return DecorationSet.create(doc, decorations);

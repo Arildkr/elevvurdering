@@ -126,7 +126,10 @@ export default function RichTextEditor({
       // Step 1: immediate client-side errors (always works)
       const known = getKnownErrors(html, ignored);
       setSpellingErrors(known);
-      applyErrorsToEditor(editor, known, ignored);
+      // Defer dispatch to avoid nested ProseMirror transaction inside onUpdate
+      setTimeout(() => {
+        if (editor && !editor.isDestroyed) applyErrorsToEditor(editor, known, ignored);
+      }, 0);
 
       // Step 2: augment with Hunspell via API
       setSpellLoading(true);
