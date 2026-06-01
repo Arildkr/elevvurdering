@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 import { parseToolsConfig, type PhaseTools } from "@/lib/tools-config";
+import { ReviewTourTrigger } from "@/components/StudentTour";
 
 interface ReviewAssignmentData {
   id: string;
@@ -221,9 +222,12 @@ export default function ReviewPage() {
           <Link href={`/assignment/${id}`} className="text-sm text-blue-600 hover:text-blue-700">
             &larr; Tilbake
           </Link>
-          <span className="text-sm text-gray-500">
-            Vurdering {currentIndex + 1} av {assignments.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              Vurdering {currentIndex + 1} av {assignments.length}
+            </span>
+            <ReviewTourTrigger />
+          </div>
         </div>
       </header>
 
@@ -241,7 +245,7 @@ export default function ReviewPage() {
         )}
 
         {/* Text to review */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div id="tour-text-to-review" className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Tekst å vurdere</h2>
           <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
             <RichTextViewer content={currentAssignment?.textContent || ""} />
@@ -265,7 +269,7 @@ export default function ReviewPage() {
           )}
 
           {/* Feedback guide */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
+          <div id="tour-feedback-guide" className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
             <p className="font-semibold text-amber-900 mb-2">To stjerner og et ønske</p>
             <div className="space-y-1.5 text-amber-800">
               <p>⭐ <strong>Stjerne 1</strong> — noe som fungerer bra i teksten</p>
@@ -294,7 +298,7 @@ export default function ReviewPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="mb-2">
+            <div id="tour-review-editor" className="mb-2">
               <RichTextEditor
                 content={reviewContent}
                 onChange={setReviewContent}
@@ -317,6 +321,7 @@ export default function ReviewPage() {
             )}
 
             <button
+              id="tour-review-submit"
               type="submit"
               disabled={submitting || charCount < 50}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
