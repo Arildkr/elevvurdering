@@ -19,7 +19,7 @@ import {
   type ReadingIssue,
 } from "@/lib/spellcheck";
 import { getConfusions } from "@/lib/norwegian-confusions";
-import { spellCheckViaWorker } from "@/lib/spell-worker";
+import { spellCheckViaWorker, isWorkerAvailable } from "@/lib/spell-worker";
 import {
   DEFAULT_PHASE_TOOLS,
   type PhaseTools,
@@ -92,6 +92,7 @@ export default function RichTextEditor({
   // Keep a ref to ignored so callbacks always see current value
   const ignoredRef = useRef(ignoredWords);
   ignoredRef.current = ignoredWords;
+  const spellDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyErrorsToEditor = useCallback(
     (ed: ReturnType<typeof useEditor>, errors: SpellError[], ignored: Set<string>) => {
@@ -201,7 +202,15 @@ export default function RichTextEditor({
         const text = e.state.doc.textContent;
         const lastChar = text[text.length - 1];
         if (!lastChar || /[\s.,!?;:()"'\[\]{}-]/.test(lastChar)) {
-          runSpellCheck(html, lang, ignoredRef.current, e);
+          if (isWorkerAvailable()) {
+            runSpellCheck(html, lang, ignoredRef.current, e);
+          } else {
+            if (spellDebounceRef.current) clearTimeout(spellDebounceRef.current);
+            spellDebounceRef.current = setTimeout(
+              () => runSpellCheck(html, lang, ignoredRef.current, e),
+              500
+            );
+          }
         }
       }
     },

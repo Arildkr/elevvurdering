@@ -39,6 +39,10 @@ function getWorker(): Worker | null {
   return worker;
 }
 
+export function isWorkerAvailable(): boolean {
+  return typeof window !== "undefined" && !workerFailed && getWorker() !== null;
+}
+
 export function spellCheckViaWorker(
   html: string,
   lang: string,
