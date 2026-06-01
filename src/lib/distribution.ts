@@ -135,17 +135,15 @@ export async function distributeReviews(assignmentId: string): Promise<number> {
     }
   }
 
-  if (newAssignments.length > 0) {
-    await prisma.reviewAssignment.createMany({
-      data: newAssignments,
-      skipDuplicates: true,
-    });
-  }
-
-  await prisma.assignment.update({
-    where: { id: assignmentId },
-    data: { distributionDone: true },
-  });
+  await prisma.$transaction([
+    ...(newAssignments.length > 0
+      ? [prisma.reviewAssignment.createMany({ data: newAssignments, skipDuplicates: true })]
+      : []),
+    prisma.assignment.update({
+      where: { id: assignmentId },
+      data: { distributionDone: true },
+    }),
+  ]);
 
   return newAssignments.length;
 }
