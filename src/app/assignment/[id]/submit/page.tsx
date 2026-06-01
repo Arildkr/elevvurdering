@@ -24,7 +24,7 @@ export default function SubmitTextPage() {
   const [timerLabel, setTimerLabel] = useState<string | null>(null);
   const [timerRemaining, setTimerRemaining] = useState<string | null>(null);
   const [timerExpired, setTimerExpired] = useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "offline">("idle");
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [windowSwitches, setWindowSwitches] = useState(0);
   const windowSwitchesRef = useRef(0);
@@ -108,11 +108,21 @@ export default function SubmitTextPage() {
     return () => clearInterval(poll);
   }, [id, canEdit, loading, router]);
 
+  // Offline detection
+  useEffect(() => {
+    const goOffline = () => { if (canEdit) setAutoSaveStatus("offline"); };
+    const goOnline = () => { if (autoSaveStatus === "offline") setAutoSaveStatus("idle"); };
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => { window.removeEventListener("offline", goOffline); window.removeEventListener("online", goOnline); };
+  }, [canEdit, autoSaveStatus]);
+
   // Auto-save every 30 seconds
   useEffect(() => {
     if (!canEdit || !content || content.trim().length < 50) return;
 
     const interval = setInterval(async () => {
+      if (!navigator.onLine) { setAutoSaveStatus("offline"); return; }
       setAutoSaveStatus("saving");
       try {
         const method = existingText ? "PUT" : "POST";
@@ -126,9 +136,11 @@ export default function SubmitTextPage() {
           setLastSavedTime(new Date());
           localStorage.setItem(`draft_${id}`, content);
           setTimeout(() => setAutoSaveStatus("idle"), 2000);
+        } else {
+          setAutoSaveStatus("idle");
         }
       } catch {
-        setAutoSaveStatus("idle");
+        setAutoSaveStatus(navigator.onLine ? "idle" : "offline");
       }
     }, 30_000);
 
@@ -368,6 +380,9 @@ export default function SubmitTextPage() {
                 )}
                 {autoSaveStatus === "saved" && (
                   <span className="text-green-600">✓ Lagret</span>
+                )}
+                {autoSaveStatus === "offline" && (
+                  <span className="text-amber-600 font-medium">⚠ Frakoblet — teksten er lagret lokalt</span>
                 )}
                 {lastSavedTime && autoSaveStatus === "idle" && (
                   <span className="text-gray-400 text-xs">
