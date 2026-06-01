@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { reviewAssignmentId, content } = parsed.data;
+    const { reviewAssignmentId, content, rubricResponse } = parsed.data;
 
     // Find the review assignment
     const reviewAssignment = await prisma.reviewAssignment.findUnique({
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
           textId: reviewAssignment.text.id,
           reviewerId: user.id,
           content: sanitizeHtml(content),
+          rubricResponse: rubricResponse ? JSON.stringify(rubricResponse) : null,
         },
       });
 

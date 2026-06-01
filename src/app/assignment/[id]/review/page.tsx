@@ -6,6 +6,7 @@ import Link from "next/link";
 import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 import { parseToolsConfig, type PhaseTools } from "@/lib/tools-config";
 import { ReviewTourTrigger } from "@/components/StudentTour";
+import { parseRubricConfig, RUBRIC_LABELS, type RubricItem, type RubricValue, type RubricResponse } from "@/lib/rubric";
 
 interface ReviewAssignmentData {
   id: string;
@@ -19,6 +20,7 @@ interface AssignmentMeta {
   title: string;
   taskText?: string | null;
   phase: "writing" | "review" | "closed" | "paused";
+  rubricItems: RubricItem[] | null;
 }
 
 export default function ReviewPage() {
@@ -33,6 +35,7 @@ export default function ReviewPage() {
   const [success, setSuccess] = useState(false);
   const [reviewTools, setReviewTools] = useState<PhaseTools | null>(null);
   const [assignmentMeta, setAssignmentMeta] = useState<AssignmentMeta | null>(null);
+  const [rubricResponses, setRubricResponses] = useState<RubricResponse[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -48,6 +51,7 @@ export default function ReviewPage() {
             title: aData.title,
             taskText: aData.taskText ?? null,
             phase: aData.phase,
+            rubricItems: parseRubricConfig(aData.rubricConfig),
           });
           if (aData.phase === "paused" || aData.phase === "closed") {
             router.push(`/assignment/${id}`);
@@ -120,6 +124,7 @@ export default function ReviewPage() {
         body: JSON.stringify({
           reviewAssignmentId: currentAssignment.id,
           content: reviewContent,
+          ...(rubricResponses.length > 0 ? { rubricResponse: rubricResponses } : {}),
         }),
       });
 
@@ -139,6 +144,7 @@ export default function ReviewPage() {
       if (nextIncomplete >= 0) {
         setCurrentIndex(nextIncomplete);
         setReviewContent("");
+        setRubricResponses([]);
         const saved = localStorage.getItem(`review-draft-${updatedAssignments[nextIncomplete].id}`);
         if (saved) setReviewContent(saved);
       } else {
@@ -298,6 +304,49 @@ export default function ReviewPage() {
           </div>
 
           <form onSubmit={handleSubmit}>
+            {/* Rubrikk */}
+            {assignmentMeta?.rubricItems && assignmentMeta.rubricItems.length > 0 && (
+              <div className="mb-5 border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    <span></span>
+                    {(["yes", "partial", "no"] as RubricValue[]).map((v) => (
+                      <span key={v} className="text-center w-20">{RUBRIC_LABELS[v]}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {assignmentMeta.rubricItems.map((item) => {
+                    const selected = rubricResponses.find((r) => r.id === item.id)?.value ?? null;
+                    return (
+                      <div key={item.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-x-2 items-center px-4 py-3">
+                        <span className="text-sm text-gray-700">{item.label}</span>
+                        {(["yes", "partial", "no"] as RubricValue[]).map((v) => (
+                          <div key={v} className="flex justify-center w-20">
+                            <button
+                              type="button"
+                              onClick={() => setRubricResponses((prev) => {
+                                const without = prev.filter((r) => r.id !== item.id);
+                                return selected === v ? without : [...without, { id: item.id, value: v }];
+                              })}
+                              className={`w-6 h-6 rounded-full border-2 transition-colors ${
+                                selected === v
+                                  ? v === "yes" ? "bg-green-500 border-green-500"
+                                    : v === "partial" ? "bg-amber-400 border-amber-400"
+                                    : "bg-red-400 border-red-400"
+                                  : "border-gray-300 hover:border-gray-400 bg-white"
+                              }`}
+                              aria-label={RUBRIC_LABELS[v]}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div id="tour-review-editor" className="mb-2">
               <RichTextEditor
                 content={reviewContent}

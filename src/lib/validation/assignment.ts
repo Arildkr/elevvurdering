@@ -39,6 +39,7 @@ export const updateAssignmentSchema = z.object({
   minReviews: z.number().int().min(1).max(10).optional(),
   feedbackDeadline: z.string().datetime().nullable().optional(),
   toolsConfig: z.string().optional(),
+  rubricConfig: z.string().nullable().optional(),
   taskOption1: z.string().max(2000).nullable().optional(),
   taskOption2: z.string().max(2000).nullable().optional(),
   exerciseLanguage: z.enum(["bokmål", "nynorsk"]).nullable().optional(),

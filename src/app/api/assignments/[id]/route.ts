@@ -107,6 +107,7 @@ export async function GET(
       groupName: assignment.group.name,
       phase,
       toolsConfig: assignment.toolsConfig ?? null,
+      rubricConfig: assignment.rubricConfig ?? null,
       isExercise: assignment.isExercise,
       taskOption1: assignment.taskOption1 ?? null,
       taskOption2: assignment.taskOption2 ?? null,

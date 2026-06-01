@@ -70,6 +70,7 @@ model Assignment {
   isArchived       Boolean   @default(false)
   toolsConfig             String?   // JSON: AssignmentToolsConfig
   taskText                String?   // Oppgavetekst som vises for eleven under skriving
+  rubricConfig            String?   // JSON: RubricItem[] — valgfri rubrikk for responsfasen
   isExercise              Boolean   @default(false)
   taskOption1             String?   // Skjønnlitterær oppgave (øving)
   taskOption2             String?   // Sakprosa-oppgave (øving)
@@ -131,6 +132,7 @@ model Review {
   textId             String
   reviewerId         String
   content            String
+  rubricResponse     String?   // JSON: RubricResponse[] — elevens svar på rubrikken
   createdAt          DateTime  @default(now())
   readAt             DateTime?
   rejectedAt         DateTime?

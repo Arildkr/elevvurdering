@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseToolsConfig } from "@/lib/tools-config";
+import { parseRubricConfig, parseRubricResponse, DEFAULT_RUBRIC, RUBRIC_LABELS, type RubricItem } from "@/lib/rubric";
 import RichTextEditor, { RichTextViewer } from "@/components/RichTextEditor";
 
 interface AssignmentDetail {
@@ -22,6 +23,7 @@ interface AssignmentDetail {
   isPaused: boolean;
   isArchived: boolean;
   toolsConfig: string | null;
+  rubricConfig: string | null;
   isExercise: boolean;
   taskOption1?: string | null;
   taskOption2?: string | null;
@@ -54,6 +56,7 @@ interface ReviewData {
   id: string;
   content: string;
   createdAt: string;
+  rubricResponse: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
   reviewer: { name: string; kandidatnummer: string };
@@ -107,6 +110,9 @@ export default function AdminAssignmentDetailPage() {
   const [editingTools, setEditingTools] = useState(false);
   const [toolsDraft, setToolsDraft] = useState("");
   const [savingTools, setSavingTools] = useState(false);
+  const [editingRubric, setEditingRubric] = useState(false);
+  const [rubricDraft, setRubricDraft] = useState<RubricItem[]>([]);
+  const [savingRubric, setSavingRubric] = useState(false);
   const [unlockingFeedback, setUnlockingFeedback] = useState<string | null>(null);
   const [showManualAssign, setShowManualAssign] = useState(false);
   const [manualReviewerId, setManualReviewerId] = useState("");
@@ -376,6 +382,27 @@ export default function AdminAssignmentDetailPage() {
       }
     } finally {
       setSavingTools(false);
+    }
+  }
+
+  async function handleSaveRubric(items: RubricItem[] | null) {
+    setSavingRubric(true);
+    try {
+      const rubricConfig = items ? JSON.stringify(items) : null;
+      const res = await fetch(`/api/assignments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rubricConfig }),
+      });
+      if (res.ok) {
+        setAssignment((prev) => prev ? { ...prev, rubricConfig } : prev);
+        setEditingRubric(false);
+      } else {
+        const data = await res.json();
+        showToast("error", data.error || "Noe gikk galt");
+      }
+    } finally {
+      setSavingRubric(false);
     }
   }
 
@@ -1168,6 +1195,27 @@ export default function AdminAssignmentDetailPage() {
                 </button>
                 {expandedReview === r.id && (
                   <div className="px-6 pb-4 border-t border-gray-100">
+                    {(() => {
+                      const rubricItems = parseRubricConfig(assignment?.rubricConfig ?? null);
+                      const rubricResp = parseRubricResponse(r.rubricResponse);
+                      if (!rubricItems || !rubricResp) return null;
+                      const colorMap: Record<string, string> = { yes: "bg-green-100 text-green-800", partial: "bg-amber-100 text-amber-800", no: "bg-red-100 text-red-800" };
+                      return (
+                        <div className="mt-4 mb-3 space-y-1.5">
+                          {rubricItems.map((item) => {
+                            const resp = rubricResp.find((rr) => rr.id === item.id);
+                            return (
+                              <div key={item.id} className="flex items-center gap-2 text-sm">
+                                <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${resp ? colorMap[resp.value] : "bg-gray-100 text-gray-400"}`}>
+                                  {resp ? RUBRIC_LABELS[resp.value] : "–"}
+                                </span>
+                                <span className="text-gray-600">{item.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                     <div className="prose prose-sm max-w-none text-gray-700 mt-4" dangerouslySetInnerHTML={{ __html: r.content }} />
                     <div className="flex items-center gap-3 mt-3">
                       <p className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleString("no-NO")}</p>
@@ -1363,6 +1411,61 @@ export default function AdminAssignmentDetailPage() {
               <p className="text-xs text-gray-400 italic">Klikk Rediger for å endre hjelpemidler per fase.</p>
             )}
           </div>
+
+          {/* Rubrikk */}
+          {!assignment.isExercise && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-700">Rubrikk for responsfasen</h3>
+                {!editingRubric && (
+                  <button
+                    onClick={() => {
+                      setRubricDraft(parseRubricConfig(assignment.rubricConfig) ?? [...DEFAULT_RUBRIC]);
+                      setEditingRubric(true);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {assignment.rubricConfig ? "Rediger" : "Aktiver"}
+                  </button>
+                )}
+              </div>
+              {editingRubric ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">Elevene klikker én av tre valg for hvert punkt når de gir tilbakemelding. Du kan endre teksten i punktene.</p>
+                  <div className="space-y-2">
+                    {rubricDraft.map((item, i) => (
+                      <div key={item.id} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 w-4 shrink-0">{i + 1}.</span>
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) => setRubricDraft((prev) => prev.map((r) => r.id === item.id ? { ...r, label: e.target.value } : r))}
+                          className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleSaveRubric(rubricDraft)} disabled={savingRubric} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                      {savingRubric ? "Lagrer..." : "Lagre"}
+                    </button>
+                    <button onClick={() => setEditingRubric(false)} className="text-gray-600 px-4 py-1.5 rounded-lg text-sm hover:bg-gray-100">Avbryt</button>
+                    {assignment.rubricConfig && (
+                      <button onClick={() => handleSaveRubric(null)} className="text-red-600 px-4 py-1.5 rounded-lg text-sm hover:bg-red-50 ml-auto">Deaktiver rubrikk</button>
+                    )}
+                  </div>
+                </div>
+              ) : assignment.rubricConfig ? (
+                <ol className="space-y-1 text-sm text-gray-600 list-decimal list-inside">
+                  {(parseRubricConfig(assignment.rubricConfig) ?? []).map((item) => (
+                    <li key={item.id}>{item.label}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Ikke aktivert — elever gir kun fritekst-tilbakemelding.</p>
+              )}
+            </div>
+          )}
 
           {/* Frister og info */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
