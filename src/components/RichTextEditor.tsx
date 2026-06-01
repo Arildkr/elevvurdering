@@ -93,8 +93,6 @@ export default function RichTextEditor({
   const ignoredRef = useRef(ignoredWords);
   ignoredRef.current = ignoredWords;
 
-  const spellDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const applyErrorsToEditor = useCallback(
     (ed: ReturnType<typeof useEditor>, errors: SpellError[], ignored: Set<string>) => {
       if (!ed) return;
@@ -203,10 +201,7 @@ export default function RichTextEditor({
         const text = e.state.doc.textContent;
         const lastChar = text[text.length - 1];
         if (!lastChar || /[\s.,!?;:()"'\[\]{}-]/.test(lastChar)) {
-          if (spellDebounceRef.current) clearTimeout(spellDebounceRef.current);
-          spellDebounceRef.current = setTimeout(() => {
-            runSpellCheck(e.getHTML(), lang, ignoredRef.current, e);
-          }, 600);
+          runSpellCheck(html, lang, ignoredRef.current, e);
         }
       }
     },
