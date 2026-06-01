@@ -23,7 +23,7 @@ export async function GET(
           select: { id: true, content: true, createdAt: true },
         },
         review: {
-          select: { id: true, content: true, createdAt: true },
+          select: { id: true, content: true, createdAt: true, rejectedAt: true, rejectionReason: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -37,7 +37,7 @@ export async function GET(
         textCreatedAt: a.text.createdAt,
         completed: a.completed,
         review: a.review
-          ? { id: a.review.id, content: a.review.content, createdAt: a.review.createdAt }
+          ? { id: a.review.id, content: a.review.content, createdAt: a.review.createdAt, rejectedAt: a.review.rejectedAt, rejectionReason: a.review.rejectionReason }
           : null,
       }))
     );

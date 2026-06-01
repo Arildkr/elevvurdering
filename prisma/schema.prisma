@@ -134,6 +134,7 @@ model Review {
   createdAt          DateTime  @default(now())
   readAt             DateTime?
   rejectedAt         DateTime?
+  rejectionReason    String?
 
   reviewAssignment ReviewAssignment @relation(fields: [reviewAssignmentId], references: [id], onDelete: Cascade)
   text             Text             @relation(fields: [textId], references: [id], onDelete: Cascade)

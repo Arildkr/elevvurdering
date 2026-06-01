@@ -3,12 +3,15 @@ import { prisma, type TransactionClient } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
 
 export async function PATCH(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     const { id } = await params;
+
+    const body = await request.json().catch(() => ({}));
+    const rejectionReason: string | undefined = typeof body?.reason === "string" ? body.reason.trim() || undefined : undefined;
 
     const review = await prisma.review.findUnique({
       where: { id },
@@ -23,7 +26,7 @@ export async function PATCH(
     await prisma.$transaction(async (tx: TransactionClient) => {
       await tx.review.update({
         where: { id },
-        data: { rejectedAt: new Date() },
+        data: { rejectedAt: new Date(), rejectionReason: rejectionReason ?? null },
       });
 
       await tx.reviewAssignment.update({

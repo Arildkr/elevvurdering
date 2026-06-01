@@ -55,6 +55,7 @@ interface ReviewData {
   content: string;
   createdAt: string;
   rejectedAt: string | null;
+  rejectionReason: string | null;
   reviewer: { name: string; kandidatnummer: string };
   text: { id: string; author: { name: string; kandidatnummer: string } };
 }
@@ -118,6 +119,8 @@ export default function AdminAssignmentDetailPage() {
   // Toast + confirm dialog
   const [toast, setToast] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; action: () => void } | null>(null);
+  const [rejectDialog, setRejectDialog] = useState<{ reviewId: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   function showToast(type: "ok" | "error", text: string) {
     setToast({ type, text });
@@ -269,15 +272,24 @@ export default function AdminAssignmentDetailPage() {
   }
 
   function handleReject(reviewId: string) {
-    askConfirm("Underkjenne denne tilbakemeldingen? Eleven må skrive en ny.", async () => {
-      const res = await fetch(`/api/reviews/${reviewId}/reject`, { method: "PATCH" });
-      if (res.ok) {
-        loadData();
-      } else {
-        const data = await res.json();
-        showToast("error", data.error || "Noe gikk galt");
-      }
+    setRejectReason("");
+    setRejectDialog({ reviewId });
+  }
+
+  async function confirmReject() {
+    if (!rejectDialog) return;
+    const res = await fetch(`/api/reviews/${rejectDialog.reviewId}/reject`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: rejectReason }),
     });
+    setRejectDialog(null);
+    if (res.ok) {
+      loadData();
+    } else {
+      const data = await res.json();
+      showToast("error", data.error || "Noe gikk galt");
+    }
   }
 
   function handleDeleteReview(reviewId: string) {
@@ -1504,6 +1516,38 @@ export default function AdminAssignmentDetailPage() {
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
           )}
           {toast.text}
+        </div>
+      )}
+
+      {/* Reject dialog */}
+      {rejectDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <p className="text-gray-900 font-medium mb-2">Underkjenn tilbakemelding</p>
+            <p className="text-sm text-gray-500 mb-4">Eleven må skrive en ny vurdering. Du kan legge ved en kort begrunnelse.</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Valgfri begrunnelse til eleven..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setRejectDialog(null)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={confirmReject}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Underkjenn
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -11,7 +11,7 @@ interface ReviewAssignmentData {
   textId: string;
   textContent: string;
   completed: boolean;
-  review: { id: string; content: string } | null;
+  review: { id: string; content: string; rejectedAt: string | null; rejectionReason: string | null } | null;
 }
 
 interface AssignmentMeta {
@@ -251,6 +251,18 @@ export default function ReviewPage() {
         {/* Review editor */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Din vurdering</h2>
+
+          {/* Rejection notice */}
+          {currentAssignment?.review?.rejectedAt && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 mb-4 text-sm">
+              <p className="font-semibold text-yellow-900 mb-1">Tilbakemeldingen din ble underkjent</p>
+              {currentAssignment.review.rejectionReason ? (
+                <p className="text-yellow-800">{currentAssignment.review.rejectionReason}</p>
+              ) : (
+                <p className="text-yellow-700">Skriv en ny og mer utfyllende tilbakemelding.</p>
+              )}
+            </div>
+          )}
 
           {/* Feedback guide */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
