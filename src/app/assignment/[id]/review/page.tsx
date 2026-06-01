@@ -251,6 +251,36 @@ export default function ReviewPage() {
         {/* Review editor */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-gray-900 mb-3">Din vurdering</h2>
+
+          {/* Feedback guide */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
+            <p className="font-semibold text-amber-900 mb-2">To stjerner og et ønske</p>
+            <div className="space-y-1.5 text-amber-800">
+              <p>⭐ <strong>Stjerne 1</strong> — noe som fungerer bra i teksten</p>
+              <p>⭐ <strong>Stjerne 2</strong> — noe annet som er bra, f.eks. språk, struktur eller innhold</p>
+              <p>✨ <strong>Ønske</strong> — ett konkret forslag til hva de kan forbedre</p>
+            </div>
+            <details className="mt-3">
+              <summary className="text-xs text-amber-700 cursor-pointer hover:text-amber-900 font-medium select-none">
+                Setningsstartere og tips ▾
+              </summary>
+              <div className="mt-2 space-y-2 text-xs text-amber-800">
+                <div>
+                  <p className="font-semibold mb-1">Stjerne:</p>
+                  <p className="text-amber-700 italic">«Jeg synes det fungerte bra at …» · «Du beskriver … på en god måte» · «Innledningen din fanget oppmerksomheten min fordi …» · «Jeg liker at du bruker …»</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Ønske:</p>
+                  <p className="text-amber-700 italic">«Jeg savnet mer om …» · «Hva om du prøvde å …?» · «Avslutningen kunne vært sterkere hvis …» · «Det kan hende teksten blir tydeligere om du …»</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Hva kan du se etter?</p>
+                  <p className="text-amber-700">Innledning og avslutning · Oppbygging og avsnitt · Varierte setninger · Konkrete detaljer og eksempler · Rettskriving og tegnsetting</p>
+                </div>
+              </div>
+            </details>
+          </div>
+
           <form onSubmit={handleSubmit}>
             <div className="mb-2">
               <RichTextEditor
